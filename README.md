@@ -75,7 +75,7 @@ A arquitetura do projeto segue o padrão MVC (Model-View-Controller) tradicional
 
 4. **Acessar a Aplicação:**
    *   **Jogo:** Acesse `http://localhost:8080` para entrar no lobby e criar as salas.
-   *   **Painel Admin:** Acesse `http://localhost:8080/admin` (utilizando as credenciais definidas no seu `.env` ou o padrão do `application.properties`).
+   *   **Painel Admin:** Acesse `http://localhost:8080/admin` para gerenciar perguntas (utilizando as credenciais definidas no seu `.env` ou o padrão do `application.properties`).
 
 ## 🧹 Manutenção e Limpeza
 O sistema possui configurações ativas no `application.properties` para limpar salas inativas automaticamente (Salas ativas abandonadas, Lobbies não iniciados ou partidas finalizadas), garantindo a integridade e otimizando o armazenamento no banco.
