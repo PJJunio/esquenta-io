@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Entrar com PIN</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="background:#FFF4E0;color:#15110F;">
+
+<div style="min-height:100vh;background:#FFF4E0;position:relative;display:flex;flex-direction:column;">
+  <div class="esq-halftone"></div>
+
+  <!-- Header -->
+  <div style="position:relative;z-index:2;padding:clamp(52px,8vh,72px) 24px 0;">
+    <a th:href="@{/}" class="esq-btn esq-btn--small esq-btn--paper">← VOLTAR</a>
+  </div>
+
+  <!-- Title -->
+  <div style="position:relative;z-index:2;padding:28px 24px 0;">
+    <div class="esq-display" style="font-size:clamp(36px,8vw,50px);">
+      tem o <span style="color:#FF4757;">PIN</span>?
+    </div>
+    <p style="margin-top:8px;font-size:15px;color:#2A2421;">Pede pro host da sala, parça.</p>
+  </div>
+
+  <!-- Form -->
+  <form th:action="@{/game/entrar}" method="post" style="position:relative;z-index:2;padding:32px 24px;flex:1;display:flex;flex-direction:column;gap:28px;max-width:460px;width:100%;">
+    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+    <!-- PIN -->
+    <div>
+      <div class="esq-label" style="margin-bottom:12px;color:#2A2421;">código da sala</div>
+      <div class="esq-pin">
+        <input class="esq-pin-slot" name="pin1" maxlength="1" inputmode="numeric" placeholder="•" autocomplete="off" required>
+        <input class="esq-pin-slot" name="pin2" maxlength="1" inputmode="numeric" placeholder="•" autocomplete="off" required>
+        <input class="esq-pin-slot" name="pin3" maxlength="1" inputmode="numeric" placeholder="•" autocomplete="off" required>
+        <input class="esq-pin-slot" name="pin4" maxlength="1" inputmode="numeric" placeholder="•" autocomplete="off" required>
+      </div>
+      <div th:if="${errorPin}" style="margin-top:10px;color:#FF4757;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">
+        ⚠ PIN inválido ou sala não encontrada
+      </div>
+    </div>
+
+    <!-- Nick -->
+    <div>
+      <div class="esq-label" style="margin-bottom:12px;color:#2A2421;">seu nick</div>
+      <input class="esq-input" name="nickname" placeholder="como te chamam?" maxlength="16" autocomplete="off" required
+             th:value="${nickname}" oninput="document.getElementById('nick-count').textContent=this.value.length"/>
+      <div style="margin-top:8px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#2A2421;letter-spacing:0.06em;">
+        <span>mínimo 2 caracteres</span>
+        <span><span id="nick-count">0</span>/16</span>
+      </div>
+      <div th:if="${errorNick}" style="margin-top:6px;color:#FF4757;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">
+        ⚠ <span th:text="${errorNick}"></span>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <div style="margin-top:auto;padding-top:12px;">
+      <button type="submit" class="esq-btn esq-btn--red esq-btn--block" style="font-size:18px;padding:18px;">
+        BORA JOGAR →
+      </button>
+    </div>
+  </form>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+</body>
+</html>

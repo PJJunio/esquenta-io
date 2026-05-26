@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Escolha o modo</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="background:#FFF4E0;color:#15110F;">
+
+<div style="min-height:100vh;background:#FFF4E0;position:relative;overflow:hidden;display:flex;flex-direction:column;">
+  <div class="esq-halftone"></div>
+
+  <!-- Header -->
+  <div style="position:relative;z-index:2;padding:clamp(20px,4vh,36px) clamp(20px,5vw,60px);display:flex;align-items:center;gap:12px;">
+    <a th:href="@{/}" class="esq-btn esq-btn--small esq-btn--paper">← VOLTAR</a>
+    <div style="flex:1;"></div>
+    <div class="esq-label" style="color:#2A2421;">passo 1 / 2</div>
+  </div>
+
+  <!-- Content wrapper -->
+  <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 clamp(20px,5vw,60px) clamp(30px,6vh,60px);">
+
+    <!-- Title -->
+    <div style="text-align:center;margin-bottom:clamp(24px,4vh,40px);">
+      <div class="esq-display" style="font-size:clamp(38px,7vw,62px);line-height:1.05;">
+        escolhe o <span style="color:#FF4757;">modo</span>.
+      </div>
+      <p style="margin-top:10px;font-size:15px;color:#2A2421;opacity:0.75;">
+        Cada um tem regras diferentes, parça.
+      </p>
+    </div>
+
+    <!-- Mode cards — lado a lado no desktop, empilhados no mobile -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:860px;margin:0 auto;width:100%;">
+
+      <!-- De Boa -->
+      <a th:href="@{/game/criar-sala/de-boa}" class="mode-card" style="
+        position:relative; display:flex; flex-direction:column; gap:12px;
+        background:#2DD4BF; border:4px solid #15110F; border-radius:22px;
+        padding:26px; cursor:pointer; text-decoration:none; color:#15110F;
+        box-shadow:4px 4px 0 #15110F; transition:transform .12s, box-shadow .12s;
+        overflow:hidden;
+      " onmouseover="this.style.transform='translate(-2px,-2px)';this.style.boxShadow='7px 7px 0 #15110F'"
+         onmouseout="this.style.transform='none';this.style.boxShadow='4px 4px 0 #15110F'">
+        <div class="esq-halftone" style="opacity:0.1;"></div>
+        <div style="position:relative;display:flex;justify-content:space-between;align-items:center;">
+          <span class="esq-tag esq-tag--ink">☕ CHILL</span>
+          <span style="font-size:42px;">😎</span>
+        </div>
+        <div class="esq-display" style="font-size:40px;position:relative;">De Boa</div>
+        <p style="font-size:14px;position:relative;max-width:85%;margin:0;line-height:1.5;">
+          Perguntas e micos light. Sem álcool, sem drama. Boa pra <b>todas as idades</b>.
+        </p>
+      </a>
+
+      <!-- Esquenta -->
+      <a th:href="@{/game/criar-sala/esquenta-confirm}" class="mode-card" style="
+        position:relative; display:flex; flex-direction:column; gap:12px;
+        background:#FF4757; border:4px solid #15110F; border-radius:22px;
+        padding:26px; cursor:pointer; text-decoration:none; color:#FFF4E0;
+        box-shadow:4px 4px 0 #15110F; transition:transform .12s, box-shadow .12s;
+        overflow:hidden;
+      " onmouseover="this.style.transform='translate(-2px,-2px)';this.style.boxShadow='7px 7px 0 #15110F'"
+         onmouseout="this.style.transform='none';this.style.boxShadow='4px 4px 0 #15110F'">
+        <div class="esq-halftone" style="opacity:0.12;background-image:radial-gradient(#FFF4E0 1.2px, transparent 1.2px);"></div>
+        <!-- +18 sticker -->
+        <div style="position:absolute;top:14px;right:14px;background:#FFB800;border:3px solid #15110F;border-radius:100px;padding:4px 12px;font-family:'Archivo Black',sans-serif;font-size:13px;font-weight:900;text-transform:uppercase;color:#15110F;box-shadow:2px 2px 0 #15110F;animation:esq-wiggle 1.2s ease-in-out infinite;z-index:1;">+18</div>
+        <div style="position:relative;display:flex;justify-content:space-between;align-items:center;">
+          <span class="esq-tag" style="background:#15110F;color:#FF4757;">🔥 PESADO</span>
+          <span style="font-size:42px;">🍻</span>
+        </div>
+        <div class="esq-display" style="font-size:40px;position:relative;">Esquenta</div>
+        <p style="font-size:14px;position:relative;max-width:85%;margin:0;line-height:1.5;">
+          Penalidades em <b>goles</b>, perguntas cabulosas, micos sem dó. <b>Só pra maiores.</b>
+        </p>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+</body>
+</html>

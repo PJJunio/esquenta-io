@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Sorteando...</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card-stack-item {
+      position: absolute; inset: 0;
+      border: 4px solid #FFF4E0;
+      border-radius: 16px;
+    }
+    .card-1 { background: #FFB800; animation: esq-shuffle 0.65s 0.0s ease-in-out infinite; }
+    .card-2 { background: #FF4757; animation: esq-shuffle 0.70s 0.1s ease-in-out infinite; }
+    .card-3 { background: #2DD4BF; animation: esq-shuffle 0.75s 0.2s ease-in-out infinite; }
+
+    .reveal-enter { animation: esq-pop 0.5s cubic-bezier(.4,1.5,.5,1) forwards; }
+
+    /* spotlight radial */
+    .spotlight {
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(255,184,0,0.25), transparent 60%);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body style="background:#15110F;color:#FFF4E0;">
+
+<div style="min-height:100vh;background:#15110F;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
+  <!-- Halftone âmbar -->
+  <div class="esq-halftone" style="background-image:radial-gradient(#FFB800 1.2px, transparent 1.2px);opacity:.18;"></div>
+  <!-- Spotlight -->
+  <div class="spotlight"></div>
+
+  <!-- Fase 1: Embaralhando (visível até JS trocar) -->
+  <div id="phase-shuffle" style="display:flex;flex-direction:column;align-items:center;gap:28px;padding:24px;position:relative;z-index:2;">
+    <div class="esq-label" style="color:#FFB800;letter-spacing:0.14em;">sorteando…</div>
+
+    <!-- Stack de cartas animadas -->
+    <div style="position:relative;width:140px;height:180px;">
+      <div class="card-stack-item card-3"></div>
+      <div class="card-stack-item card-2"></div>
+      <div class="card-stack-item card-1"></div>
+    </div>
+
+    <div class="esq-label" style="color:#FFB800;opacity:0.5;">aguarda aí, parça</div>
+  </div>
+
+  <!-- Fase 2: Revelação do jogador (oculto até JS mostrar) -->
+  <div id="phase-reveal" style="display:none;flex-direction:column;align-items:center;gap:14px;padding:24px;position:relative;z-index:2;text-align:center;">
+    <div class="esq-label" style="color:#FFB800;letter-spacing:0.14em;">jogador da vez</div>
+
+    <div class="reveal-enter" style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+      <!-- Avatar do jogador sorteado -->
+      <div id="avatar-container" data-avatar
+           th:data-name="${jogadorDaVez.nickname}"
+           data-idx="0" data-size="120" data-turn="true"></div>
+
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:clamp(32px,8vw,44px);color:#FFF4E0;"
+           th:text="${jogadorDaVez.nickname}">Nick</div>
+
+      <div class="esq-label" style="color:#FFB800;">é a sua vez! 🎯</div>
+    </div>
+
+    <!-- Auto-avança após 2s -->
+    <div style="margin-top:24px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#FFF4E0;opacity:0.4;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;">
+        indo pro cartão em <span id="countdown">2</span>s...
+      </div>
+      <!-- Barra de progresso auto-advance -->
+      <div style="width:200px;height:6px;background:rgba(255,255,255,0.15);border-radius:100px;overflow:hidden;">
+        <div id="advance-bar" style="height:100%;width:0%;background:#FFB800;transition:width 2s linear;border-radius:100px;"></div>
+      </div>
+    </div>
+
+    <!-- Botão manual caso queira pular -->
+    <a th:href="'/sala/' + ${sala.id} + '/partida'"
+       id="btn-continuar"
+       class="esq-btn esq-btn--block"
+       style="background:#FFB800;max-width:280px;margin-top:8px;font-size:16px;">
+      VER CARTÃO →
+    </a>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+<script th:inline="javascript">
+  const salaId     = /*[[${sala.id}]]*/ 1;
+  const partidaUrl = '/sala/' + salaId + '/partida';
+
+  // Após 1.4s: esconde shuffle, mostra reveal
+  setTimeout(() => {
+    document.getElementById('phase-shuffle').style.display = 'none';
+    const reveal = document.getElementById('phase-reveal');
+    reveal.style.display = 'flex';
+
+    // Inicia barra de progresso
+    setTimeout(() => {
+      document.getElementById('advance-bar').style.width = '100%';
+    }, 50);
+
+    // Countdown
+    let c = 2;
+    const interval = setInterval(() => {
+      c--;
+      document.getElementById('countdown').textContent = c;
+      if (c <= 0) {
+        clearInterval(interval);
+        window.location.href = partidaUrl;
+      }
+    }, 1000);
+
+  }, 1400);
+</script>
+
+<!-- WS: todos os eventos da partida -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@6/bundles/stomp.umd.min.js"></script>
+<script th:inline="javascript">
+(function() {
+  const salaId = /*[[${sala.id}]]*/ 1;
+  const ws = new StompJs.Client({
+    webSocketFactory: () => new SockJS('/ws'),
+    reconnectDelay: 3000,
+  });
+  ws.onConnect = () => {
+    ws.subscribe('/topic/partida/' + salaId, (msg) => {
+      try {
+        const d = JSON.parse(msg.body);
+        if (d.type === 'next-turn') {
+          window.location.href = '/sala/' + salaId + '/sorteio';
+        } else if (d.type === 'recompensa' && d.cartaoId) {
+          window.location.href = '/sala/' + salaId + '/recompensa?cartaoId=' + d.cartaoId + '&jogadorId=' + d.jogadorId;
+        } else if (d.type === 'penalidade' && d.cartaoId) {
+          window.location.href = '/sala/' + salaId + '/penalidade?cartaoId=' + d.cartaoId + '&jogadorId=' + d.jogadorId;
+        } else if (d.type === 'game-over') {
+          window.location.href = '/sala/' + salaId + '/podio';
+        }
+      } catch(e) {}
+    });
+  };
+  ws.activate();
+})();
+</script>
+</body>
+</html>

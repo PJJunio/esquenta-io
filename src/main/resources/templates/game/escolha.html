@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Verdade ou Desafio?</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .escolha-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; width: 100%;
+      border: 4px solid #15110F; border-radius: 22px;
+      padding: 28px 16px;
+      font-family: 'Bagel Fat One', sans-serif;
+      font-size: clamp(28px, 7vw, 38px);
+      cursor: pointer;
+      box-shadow: 6px 6px 0 #15110F;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .escolha-btn:hover  { transform: translate(-2px,-2px); box-shadow: 8px 8px 0 #15110F; }
+    .escolha-btn:active { transform: translate(4px,4px);  box-shadow: 2px 2px 0 #15110F; }
+    .escolha-btn--verdade { background: #2DD4BF; color: #15110F; }
+    .escolha-btn--desafio { background: #FF4757; color: #FFF4E0; }
+    .escolha-btn .emoji  { font-size: clamp(44px, 12vw, 64px); line-height: 1; }
+    .escolha-btn .label  { font-size: 13px; font-family: 'JetBrains Mono', monospace;
+                            font-weight: 700; letter-spacing: 0.12em; opacity: 0.75; }
+
+    .waiting-overlay {
+      display: none; position: fixed; inset: 0; z-index: 50;
+      background: rgba(21,17,15,0.85); backdrop-filter: blur(4px);
+      flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    }
+    .waiting-overlay.active { display: flex; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top-color: #FFB800;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+  </style>
+</head>
+<body style="background:#FF4757;color:#FFF4E0;">
+
+<!-- Waiting overlay (outros jogadores veem enquanto aguardam) -->
+<div id="waiting-overlay" class="waiting-overlay">
+  <div class="spinner"></div>
+  <div style="font-family:'Bagel Fat One',sans-serif;font-size:22px;color:#FFF4E0;">aguardando escolha…</div>
+</div>
+
+<div style="min-height:100vh;background:#FF4757;position:relative;display:flex;flex-direction:column;overflow:hidden;">
+  <div class="esq-halftone" style="background-image:radial-gradient(#FFF4E0 1.2px,transparent 1.2px);opacity:.08;"></div>
+
+  <!-- Header -->
+  <div style="position:relative;z-index:2;padding:clamp(44px,8vh,60px) 20px 0;display:flex;align-items:center;">
+    <div style="flex:1;"></div>
+    <span class="esq-tag" style="background:#15110F;color:#FF4757;font-size:10px;">🔥 ESQUENTA</span>
+  </div>
+
+  <!-- Jogador da vez -->
+  <div style="position:relative;z-index:2;display:flex;justify-content:center;margin-top:16px;">
+    <div style="display:flex;align-items:center;gap:10px;background:#15110F;color:#FFF4E0;padding:6px 16px 6px 6px;border-radius:100px;box-shadow:3px 3px 0 rgba(0,0,0,0.3);">
+      <div data-avatar th:data-name="${jogadorDaVez.nickname}" data-idx="0" data-size="32"></div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:14px;">
+        vez d<span th:if="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">a</span><span th:unless="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">o</span>
+        <span style="color:#FFB800;" th:text="${jogadorDaVez.nickname}">Nick</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div style="position:relative;z-index:2;text-align:center;padding:24px 20px 8px;">
+    <div style="font-family:'Bagel Fat One',sans-serif;font-size:clamp(36px,10vw,54px);color:#FFF4E0;line-height:1;letter-spacing:-0.01em;">
+      verdade<br>
+      <span style="color:#FFB800;">ou</span><br>
+      desafio?
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;opacity:0.6;margin-top:8px;">
+      escolha abaixo
+    </div>
+  </div>
+
+  <!-- Botões de escolha (só o jogador da vez) -->
+  <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;gap:14px;padding:16px 20px 40px;">
+
+    <!-- É minha vez: mostro os botões -->
+    <div th:if="${isMinhaVez}" style="flex:1;display:flex;flex-direction:column;gap:14px;">
+      <form th:action="@{/sala/{id}/escolha(id=${sala.id})}" method="post" style="flex:1;display:flex;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="tipo" value="PERGUNTA"/>
+        <button type="submit" class="escolha-btn escolha-btn--verdade" onclick="mostrarWaiting()">
+          <div class="emoji">🗣️</div>
+          <div style="font-family:'Bagel Fat One',sans-serif;font-size:clamp(28px,7vw,38px);">VERDADE</div>
+          <div class="label">responder uma pergunta</div>
+        </button>
+      </form>
+      <form th:action="@{/sala/{id}/escolha(id=${sala.id})}" method="post" style="flex:1;display:flex;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="tipo" value="MICO"/>
+        <button type="submit" class="escolha-btn escolha-btn--desafio" onclick="mostrarWaiting()">
+          <div class="emoji">🔥</div>
+          <div style="font-family:'Bagel Fat One',sans-serif;font-size:clamp(28px,7vw,38px);">DESAFIO</div>
+          <div class="label">cumprir um mico</div>
+        </button>
+      </form>
+    </div>
+
+    <!-- Não é minha vez: aguardando escolha -->
+    <div th:unless="${isMinhaVez}"
+         style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;">
+      <div style="font-size:48px;">⏳</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:22px;color:#FFF4E0;">
+        aguardando escolha de<br>
+        <span style="color:#FFB800;" th:text="${jogadorDaVez.nickname}">Nick</span>
+      </div>
+      <div class="esq-label" style="color:#FFF4E0;opacity:0.6;font-size:10px;">você será redirecionado automaticamente</div>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+
+<!-- WebSocket: outros jogadores são redirecionados quando a escolha for feita -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@6/bundles/stomp.umd.min.js"></script>
+<script th:inline="javascript">
+  const salaId = /*[[${sala.id}]]*/ 1;
+
+  function mostrarWaiting() {
+    document.getElementById('waiting-overlay').classList.add('active');
+  }
+
+  const client = new StompJs.Client({
+    webSocketFactory: () => new SockJS('/ws'),
+    reconnectDelay: 3000,
+  });
+
+  client.onConnect = () => {
+    client.subscribe('/topic/partida/' + salaId, (msg) => {
+      try {
+        const data = JSON.parse(msg.body);
+        if (data.type === 'card-ready') {
+          window.location.href = '/sala/' + salaId + '/partida';
+        }
+      } catch (e) {}
+    });
+  };
+
+  client.activate();
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Pódio!</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="background:#FFB800;color:#15110F;">
+
+<div style="min-height:100vh;background:#FFB800;position:relative;display:flex;flex-direction:column;overflow:hidden;">
+  <div class="esq-halftone" style="background-image:radial-gradient(#15110F 1.2px,transparent 1.2px);opacity:.1;"></div>
+  <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5;" data-confetti="50"></div>
+
+  <!-- Title -->
+  <div style="position:relative;z-index:2;padding:clamp(40px,8vh,60px) 20px 0;text-align:center;">
+    <div class="esq-label" style="color:#2A2421;">partida finalizada</div>
+    <div class="esq-display" style="font-size:clamp(44px,11vw,60px);margin-top:4px;line-height:0.9;">
+      fim de<br/><span style="color:#FF4757;text-shadow:4px 4px 0 #15110F;">jogo!</span>
+    </div>
+  </div>
+
+  <!-- Podium top 3 -->
+  <div style="position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:24px 24px 0;height:240px;">
+
+    <!-- 2nd place -->
+    <div th:if="${top3[1] != null}" style="display:flex;flex-direction:column;align-items:center;flex:1;animation:esq-rise 0.5s 0.2s backwards;">
+      <div data-avatar th:data-name="${top3[1].nickname}" data-idx="1" data-size="56"></div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:13px;margin-top:6px;text-align:center;color:#15110F;" th:text="${top3[1].nickname}">2º</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:18px;color:#FF4757;" th:text="${top3[1].pontuacao}">0</div>
+      <div class="esq-podium-bar" style="width:100%;margin-top:6px;background:#F5E6C8;height:70px;font-size:42px;color:#15110F;">2</div>
+    </div>
+
+    <!-- 1st place -->
+    <div th:if="${top3[0] != null}" style="display:flex;flex-direction:column;align-items:center;flex:1;animation:esq-rise 0.5s backwards;">
+      <div style="animation:esq-bounce 1.5s ease-in-out infinite;position:relative;">
+        <div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:28px;">👑</div>
+        <div data-avatar th:data-name="${top3[0].nickname}" data-idx="0" data-size="72" th:data-host="${top3[0].isHost()}"></div>
+      </div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:15px;margin-top:6px;text-align:center;color:#15110F;" th:text="${top3[0].nickname}">1º</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:22px;color:#FF4757;" th:text="${top3[0].pontuacao}">0</div>
+      <div class="esq-podium-bar" style="width:100%;margin-top:6px;background:#FF4757;color:#FFF4E0;height:110px;font-size:58px;">1</div>
+    </div>
+
+    <!-- 3rd place -->
+    <div th:if="${top3[2] != null}" style="display:flex;flex-direction:column;align-items:center;flex:1;animation:esq-rise 0.5s 0.4s backwards;">
+      <div data-avatar th:data-name="${top3[2].nickname}" data-idx="2" data-size="48"></div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;margin-top:6px;text-align:center;color:#15110F;" th:text="${top3[2].nickname}">3º</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:16px;color:#FF4757;" th:text="${top3[2].pontuacao}">0</div>
+      <div class="esq-podium-bar" style="width:100%;margin-top:6px;background:#2DD4BF;height:50px;font-size:32px;color:#15110F;">3</div>
+    </div>
+  </div>
+
+  <!-- Rest + buttons -->
+  <div style="position:relative;z-index:2;padding:16px 16px 32px;display:flex;flex-direction:column;gap:12px;flex:1;">
+
+    <!-- 4th+ list -->
+    <div th:if="${resto != null and !#lists.isEmpty(resto)}"
+         style="background:#FFFBF2;border:3px solid #15110F;border-radius:var(--radius-lg);box-shadow:4px 4px 0 #15110F;padding:12px;display:flex;flex-direction:column;gap:8px;">
+      <div th:each="jogador, iter : ${resto}" style="display:flex;align-items:center;gap:10px;">
+        <div style="font-family:'Bagel Fat One',sans-serif;font-size:18px;color:#4D423D;width:28px;" th:text="${iter.index + 4} + '.'">4.</div>
+        <div data-avatar th:data-name="${jogador.nickname}" th:data-idx="${iter.index + 3}" data-size="32"></div>
+        <div style="flex:1;font-family:'Archivo Black',sans-serif;font-size:14px;color:#15110F;" th:text="${jogador.nickname}">Nick</div>
+        <div style="font-family:'Bagel Fat One',sans-serif;font-size:16px;color:#FF4757;" th:text="${jogador.pontuacao}">0</div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:flex;gap:10px;margin-top:auto;">
+      <form th:action="@{/game/lobby/{codigo}/sair(codigo=${sala.codigoAcesso})}" method="post" style="flex:1;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" class="esq-btn esq-btn--paper" style="width:100%;font-size:13px;">SAIR</button>
+      </form>
+      <a th:href="@{/sala/{id}/jogar-de-novo(id=${sala.id})}" class="esq-btn esq-btn--red" style="flex:2;font-size:13px;">🔁 JOGAR DE NOVO</a>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+</body>
+</html>

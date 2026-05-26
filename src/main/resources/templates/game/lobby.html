@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Lobby</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .lobby-bg-hot  { background:#FF4757 !important; }
+    .lobby-bg-cool { background:#2DD4BF !important; }
+  </style>
+</head>
+<body style="color:#15110F;">
+
+<div id="lobby-root" style="min-height:100vh;position:relative;overflow:hidden;display:flex;flex-direction:column;"
+     th:class="${sala.modoJogo.name() == 'ESQUENTA'} ? 'lobby-bg-hot' : 'lobby-bg-cool'">
+
+  <div class="esq-halftone" th:style="${sala.modoJogo.name() == 'ESQUENTA'} ? 'background-image:radial-gradient(#FFF4E0 1.2px,transparent 1.2px);opacity:.1' : 'opacity:.08'"></div>
+
+  <!-- Header -->
+  <div style="position:relative;z-index:2;padding:clamp(48px,8vh,66px) 20px 0;display:flex;align-items:center;gap:12px;">
+    <form th:action="@{/game/lobby/{codigo}/sair(codigo=${sala.codigoAcesso})}" method="post" style="display:inline;">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <button type="submit" class="esq-btn esq-btn--small esq-btn--paper">← SAIR</button>
+    </form>
+    <div style="flex:1;"></div>
+    <span class="esq-tag esq-tag--ink"
+          th:style="${sala.modoJogo.name() == 'ESQUENTA'} ? 'background:#15110F;color:#FF4757;' : 'background:#15110F;color:#2DD4BF;'"
+          th:text="${sala.modoJogo.name() == 'ESQUENTA'} ? '🔥 ESQUENTA' : '😎 DE BOA'">
+    </span>
+  </div>
+
+  <!-- PIN -->
+  <div style="position:relative;z-index:2;padding:24px 20px 0;text-align:center;">
+    <div class="esq-label" style="opacity:0.75;margin-bottom:8px;"
+         th:style="${sala.modoJogo.name() == 'ESQUENTA'} ? 'color:#FFF4E0' : 'color:#15110F'">
+      compartilha o pin
+    </div>
+    <div style="font-family:'Bagel Fat One',sans-serif;font-size:clamp(52px,14vw,72px);letter-spacing:0.18em;line-height:1;"
+         th:style="${sala.modoJogo.name() == 'ESQUENTA'} ? 'color:#FFF4E0' : 'color:#15110F'"
+         th:text="${#strings.arrayJoin(#strings.arraySplit(sala.codigoAcesso,''), ' ')}">
+      7 4 2 1
+    </div>
+    <button style="
+      margin-top:10px; background:#FFFBF2; color:#15110F;
+      border:3px solid #15110F; border-radius:100px;
+      padding:6px 18px; font-family:'JetBrains Mono',monospace;
+      font-weight:700; font-size:11px; letter-spacing:0.12em;
+      text-transform:uppercase; cursor:pointer; box-shadow:3px 3px 0 #15110F;
+    " onclick="navigator.clipboard.writeText(window.location.href).then(()=>this.textContent='✓ COPIADO!')">
+      📋 COPIAR LINK
+    </button>
+  </div>
+
+  <!-- Players card -->
+  <div style="position:relative;z-index:2;margin:20px 16px 0;flex:1;">
+    <div style="background:#FFFBF2;border:4px solid #15110F;border-radius:22px;box-shadow:6px 6px 0 #15110F;padding:18px;display:flex;flex-direction:column;height:100%;min-height:220px;">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;">
+        <div class="esq-display" style="font-size:22px;color:#15110F;">na sala</div>
+        <div class="esq-label" style="color:#2A2421;">
+          <span style="color:#FF4757;" th:text="${jogadoresProntos}">0</span>/<span th:text="${jogadores.size()}">0</span> prontos
+        </div>
+      </div>
+      <div id="player-list" style="display:flex;flex-direction:column;gap:10px;overflow:auto;flex:1;">
+        <div th:each="jogador, iter : ${jogadores}" class="esq-player-item"
+             th:style="'animation-delay:' + ${iter.index * 0.06} + 's'">
+          <div data-avatar th:data-name="${jogador.nickname}" th:data-idx="${iter.index}" data-size="42" th:data-host="${jogador.isHost()}"></div>
+          <div style="flex:1;font-family:'Archivo Black',sans-serif;font-size:16px;color:#15110F;" th:text="${jogador.nickname}">Nick</div>
+          <span th:if="${jogador.isReady()}" class="esq-tag esq-tag--teal" style="font-size:10px;">✓ PRONTO</span>
+          <span th:unless="${jogador.isReady()}" class="esq-tag" style="font-size:10px;opacity:0.4;">● AGUARD.</span>
+          <!-- Botão remover: só aparece para o host, ao lado de jogadores não-host -->
+          <button th:if="${isHost and !jogador.isHost()}"
+                  th:attr="data-remover-url=@{/game/lobby/{c}/remover/{j}(c=${sala.codigoAcesso},j=${jogador.id})},
+                           data-csrf-token=${_csrf.token},
+                           data-csrf-param=${_csrf.parameterName}"
+                  title="Remover jogador"
+                  onclick="removerJogador(this)"
+                  style="background:none;border:none;cursor:pointer;padding:4px 6px;
+                         font-size:14px;opacity:0.55;line-height:1;border-radius:6px;
+                         transition:opacity 0.1s,background 0.1s;"
+                  onmouseover="this.style.opacity='1';this.style.background='rgba(255,71,87,0.15)'"
+                  onmouseout="this.style.opacity='0.55';this.style.background='none'">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Start / Waiting -->
+  <div style="position:relative;z-index:2;padding:16px 20px 32px;">
+
+    <!-- Erro de cartões insuficientes -->
+    <div th:if="${erroCartoes}"
+         style="margin-bottom:12px;padding:12px 16px;background:#FFFBF2;border:3px solid #FF4757;border-radius:14px;box-shadow:3px 3px 0 #15110F;display:flex;align-items:flex-start;gap:10px;">
+      <span style="font-size:20px;flex-shrink:0;">⚠️</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#FF4757;line-height:1.4;"
+            th:text="${erroCartoes}"></span>
+    </div>
+
+    <!-- Host: seletor de rodadas + botão iniciar -->
+    <div th:if="${isHost}">
+      <form th:action="@{/sala/{id}/iniciar(id=${sala.id})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <!-- Seletor de nº de questões (mínimo 10) -->
+        <div style="margin-bottom:12px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.7;display:block;margin-bottom:6px;">
+            🎯 número de questões
+          </label>
+          <select name="maxRodadas"
+                  style="width:100%;padding:10px 14px;font-family:'Archivo Black',sans-serif;font-size:15px;
+                         border:3px solid #15110F;border-radius:12px;background:#FFFBF2;color:#15110F;
+                         box-shadow:3px 3px 0 #15110F;cursor:pointer;">
+            <option value="10">10 questões</option>
+            <option value="15">15 questões</option>
+            <option value="20" selected>20 questões</option>
+            <option value="30">30 questões</option>
+            <option value="">todas disponíveis</option>
+          </select>
+        </div>
+        <button type="submit" class="esq-btn esq-btn--block"
+                style="background:#FFB800;font-size:18px;padding:18px;"
+                th:disabled="${jogadoresProntos < 2}">
+          🎲 COMEÇAR JOGO
+        </button>
+      </form>
+      <div th:if="${jogadoresProntos < 2}"
+           style="margin-top:10px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.6;">
+        ⏳ aguardando mais jogadores...
+      </div>
+    </div>
+    <!-- Não-host: botão pronto -->
+    <div th:unless="${isHost}">
+      <form th:action="@{/game/lobby/{codigo}/ready(codigo=${sala.codigoAcesso})}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" class="esq-btn esq-btn--block"
+                style="font-size:18px;padding:18px;background:#2DD4BF;">
+          ✅ ESTOU PRONTO
+        </button>
+      </form>
+      <div style="margin-top:12px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.6;">
+        ⏳ aguardando o host iniciar...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+
+<!-- WebSocket: atualização em tempo real quando jogadores entram ou ficam prontos -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@6/bundles/stomp.umd.min.js"></script>
+<script th:inline="javascript">
+  const lobbyTopic = '/topic/lobby/' + /*[[${sala.codigoAcesso}]]*/ '0000';
+
+  const client = new StompJs.Client({
+    webSocketFactory: () => new SockJS('/ws'),
+    reconnectDelay: 3000,
+  });
+
+  const meuJogadorId = /*[[${session.jogadorId}]]*/ null;
+
+  // Remover jogador via AJAX (sem redirect) — a atualização chega pelo WS
+  function removerJogador(btn) {
+    const url        = btn.getAttribute('data-remover-url');
+    const csrfToken  = btn.getAttribute('data-csrf-token');
+    const csrfParam  = btn.getAttribute('data-csrf-param');
+    if (!url) return;
+
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    const body = new URLSearchParams();
+    body.append(csrfParam, csrfToken);
+
+    fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+      .then(r => {
+        if (!r.ok) { btn.disabled = false; btn.textContent = '✕'; }
+        // Se OK, o WS fired 'kicked' e o lobby vai recarregar via window.location.reload()
+      })
+      .catch(() => { btn.disabled = false; btn.textContent = '✕'; });
+  }
+
+  client.onConnect = () => {
+    client.subscribe(lobbyTopic, (msg) => {
+      try {
+        const data = JSON.parse(msg.body);
+        if (data.type === 'game-started' && data.salaId) {
+          window.location.href = '/sala/' + data.salaId + '/sorteio';
+          return;
+        }
+        if (data.type === 'sala-encerrada') {
+          // Host saiu — manda todos pra home
+          window.location.href = '/';
+          return;
+        }
+        if (data.type === 'kicked') {
+          if (meuJogadorId && data.jogadorId === meuJogadorId) {
+            // Este jogador foi removido pelo host
+            window.location.href = '/';
+          } else {
+            // Host ou outros players: recarrega a lista
+            window.location.reload();
+          }
+          return;
+        }
+      } catch (e) { /* mensagem não-JSON → segue reload normal */ }
+      // Recarrega a página para refletir a nova lista de jogadores
+      window.location.reload();
+    });
+  };
+
+  client.onStompError = (frame) => {
+    console.warn('STOMP error:', frame);
+  };
+
+  client.activate();
+</script>
+</body>
+</html>

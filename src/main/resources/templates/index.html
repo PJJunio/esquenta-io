@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — jogo de festa online</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body { margin: 0; padding: 0; min-height: 100vh; background: #FFF4E0; }
+
+    /* ── Logo ── */
+    .esq-logo-text {
+      font-family: 'Bagel Fat One', sans-serif;
+      font-size: clamp(38px, 8vw, 58px);
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── Wrapper ── */
+    .home-wrapper {
+      min-height: 100vh;
+      background: #FFF4E0;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── MOBILE hero ── */
+    .esq-mobile-hero {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: clamp(90px, 14vh, 130px) 24px clamp(80px, 12vh, 110px);
+      gap: 20px;
+      max-width: 440px;
+      width: 100%;
+    }
+
+    /* ── Wavy underline ── */
+    .esq-wavy-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .esq-wavy-wrap svg {
+      position: absolute;
+      left: 0;
+      bottom: -8px;
+      width: 100%;
+      height: 14px;
+      overflow: visible;
+    }
+
+    /* ── Starburst ── */
+    .esq-starburst-shape {
+      width: 420px;
+      height: 420px;
+      background: #FFB800;
+      flex-shrink: 0;
+      clip-path: polygon(
+        50% 0%,  59% 16%, 75%  7%, 75% 25%, 93% 25%, 84% 41%,
+        100% 50%, 84% 59%, 93% 75%, 75% 75%, 75% 93%, 59% 84%,
+        50% 100%, 41% 84%, 25% 93%, 25% 75%,  7% 75%, 16% 59%,
+        0%  50%, 16% 41%,  7% 25%, 25% 25%, 25%  7%, 41% 16%
+      );
+      animation: esq-spin-slow 40s linear infinite;
+    }
+
+    /* ── Floating preview cards ── */
+    .esq-float-card-1 {
+      position: absolute;
+      top: 24px;
+      left: 0;
+      animation: esq-float 4s ease-in-out infinite;
+    }
+    .esq-float-card-2 {
+      position: absolute;
+      bottom: 44px;
+      right: 0;
+      animation: esq-float 4.5s 0.5s ease-in-out infinite;
+    }
+
+    /* ═══════════════════════════════════════
+       DESKTOP — min-width: 768px
+       ═══════════════════════════════════════ */
+    .esq-desktop-nav  { display: none; }
+    .esq-desktop-hero { display: none; }
+
+    @media (min-width: 768px) {
+      /* hide mobile */
+      .esq-mobile-hero    { display: none; }
+      .esq-mobile-sticker { display: none; }
+
+      /* desktop wrapper */
+      .home-wrapper {
+        align-items: stretch;
+        /* height is viewport — everything positioned absolutely inside */
+      }
+
+      /* ── Desktop nav ── */
+      .esq-desktop-nav {
+        display: flex;
+        position: absolute;
+        top: 46px;
+        left: 0;
+        right: 0;
+        align-items: center;
+        padding: 18px 40px;
+        gap: 24px;
+        z-index: 10;
+      }
+      .esq-desktop-nav__logo {
+        font-family: 'Bagel Fat One', sans-serif;
+        font-size: 28px;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .esq-desktop-nav__links {
+        display: flex;
+        gap: 22px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .esq-desktop-nav__links a {
+        color: #15110F;
+        text-decoration: none;
+      }
+      .esq-desktop-nav__links a:hover { color: #FF4757; }
+
+      /* ── Desktop hero ── */
+      .esq-desktop-hero {
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        gap: 40px;
+        align-items: center;
+        position: absolute;
+        top: 130px;
+        left: 40px;
+        right: 40px;
+        bottom: 0;
+        z-index: 2;
+      }
+
+      /* ── Left column ── */
+      .esq-desktop-left {
+        position: relative;
+      }
+      .esq-desktop-title {
+        font-family: 'Bagel Fat One', sans-serif;
+        font-size: clamp(56px, 7vw, 100px);
+        line-height: 0.9;
+        letter-spacing: -0.01em;
+      }
+
+      /* ── Right column ── */
+      .esq-desktop-right {
+        position: relative;
+        height: 480px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body style="background:#FFF4E0;color:#15110F;">
+
+<div class="home-wrapper">
+
+  <!-- ── Halftone bg (shared) ── -->
+  <div class="esq-halftone" style="opacity:0.07;"></div>
+
+  <!-- ── Marquee (shared) ── -->
+  <div class="esq-marquee" style="position:absolute;top:0;left:0;right:0;z-index:5;">
+    <div class="esq-marquee-track">
+      <span>BORA JOGAR <span style="color:#FF4757">★</span></span>
+      <span>DE BOA · OU · ESQUENTA <span style="color:#FF4757">★</span></span>
+      <span>GRÁTIS <span style="color:#FF4757">★</span></span>
+      <span>+18 <span style="color:#FF4757">★</span></span>
+      <span>JOGO DE FESTA <span style="color:#FF4757">★</span></span>
+      <span>BORA JOGAR <span style="color:#FF4757">★</span></span>
+      <span>DE BOA · OU · ESQUENTA <span style="color:#FF4757">★</span></span>
+      <span>GRÁTIS <span style="color:#FF4757">★</span></span>
+      <span>+18 <span style="color:#FF4757">★</span></span>
+      <span>JOGO DE FESTA <span style="color:#FF4757">★</span></span>
+    </div>
+  </div>
+
+  <!-- ── Mobile-only stickers ── -->
+  <div class="esq-sticker esq-mobile-sticker" style="top:80px;left:clamp(16px,4vw,60px);--rot:-8deg;">NOVO! 🎉</div>
+  <div class="esq-sticker esq-sticker--red esq-mobile-sticker" style="top:88px;right:clamp(16px,4vw,60px);--rot:6deg;">+18 🔥</div>
+  <div class="esq-sticker esq-mobile-sticker" style="bottom:clamp(160px,20vw,260px);left:clamp(16px,3vw,40px);--rot:-10deg;background:#2DD4BF;">FAVORITO ⭐</div>
+
+  <!-- ════════════════════════════════
+       MOBILE HERO
+       ════════════════════════════════ -->
+  <div class="esq-mobile-hero">
+
+    <!-- Mascot -->
+    <div style="animation:esq-bounce 3s ease-in-out infinite;" data-mascot data-size="130" data-mood="happy"></div>
+
+    <!-- Logo -->
+    <div style="display:flex;flex-direction:column;align-items:center;line-height:1;">
+      <div class="esq-logo-text">
+        <span style="color:#FF4757;text-shadow:3px 3px 0 #15110F;">esquenta</span><span style="color:#15110F;">.io</span>
+      </div>
+      <div class="esq-label" style="margin-top:8px;color:#2A2421;">JOGO DE FESTA · ONLINE · GRÁTIS</div>
+    </div>
+
+    <p style="font-size:15px;color:#2A2421;max-width:280px;line-height:1.5;margin:0;">
+      Chama a galera, escolhe o modo, <b style="color:#15110F;">bora começar</b> a esquenta 🔥
+    </p>
+
+    <!-- Buttons -->
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:320px;margin-top:8px;">
+      <a th:href="@{/game/criar-sala}" class="esq-btn esq-btn--red esq-btn--block" style="font-size:18px;padding:18px 22px;">
+        CRIAR SALA →
+      </a>
+      <a th:href="@{/game/entrar}" class="esq-btn esq-btn--block esq-btn--paper" style="font-size:18px;padding:18px 22px;border-color:#15110F;">
+        ENTRAR COM PIN
+      </a>
+    </div>
+
+  </div>
+  <!-- /MOBILE HERO -->
+
+  <!-- ════════════════════════════════
+       DESKTOP NAV
+       ════════════════════════════════ -->
+  <nav class="esq-desktop-nav">
+    <div class="esq-desktop-nav__logo">
+      <span style="color:#FF4757;text-shadow:2px 2px 0 #15110F;">esquenta</span><span style="color:#15110F;">.io</span>
+    </div>
+    <div style="flex:1;"></div>
+  </nav>
+
+  <!-- ════════════════════════════════
+       DESKTOP HERO
+       ════════════════════════════════ -->
+  <div class="esq-desktop-hero">
+
+    <!-- ── LEFT: copy ── -->
+    <div class="esq-desktop-left">
+
+      <!-- Sticker "NOVO!" (desktop position) -->
+      <div class="esq-sticker esq-sticker--teal"
+           style="position:absolute;top:-38px;left:-8px;--rot:-6deg;font-size:12px;">NOVO!</div>
+
+      <!-- Big title -->
+      <div class="esq-desktop-title">
+        <span style="display:inline-block;transform:rotate(-2deg);">jogo</span>
+        <span style="color:#FF4757;text-shadow:6px 6px 0 #15110F;"> de festa</span><br>
+        <span>pra
+          <span class="esq-wavy-wrap" style="color:#FF4757;">esquentar
+            <svg viewBox="0 0 200 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 12 Q50 2 100 8 T198 6" stroke="#FFB800" stroke-width="6" stroke-linecap="round"/>
+            </svg>
+          </span>
+          a galera.
+        </span>
+      </div>
+
+      <!-- Subtitle -->
+      <p style="margin-top:24px;font-size:18px;color:#2A2421;max-width:460px;line-height:1.6;">
+        Cria uma sala, manda o PIN pra galera, escolhe o modo e <b style="color:#15110F;">bora começar</b>.
+        Perguntas, micos, goles e muita risada.
+        <b style="color:#FF4757;">Grátis</b>, sem download, sem cadastro.
+      </p>
+
+      <!-- Buttons -->
+      <div style="display:flex;gap:14px;margin-top:30px;align-items:center;flex-wrap:wrap;">
+        <a th:href="@{/game/criar-sala}" class="esq-btn esq-btn--red" style="font-size:18px;padding:20px 28px;">
+          CRIAR SALA →
+        </a>
+        <a th:href="@{/game/entrar}" class="esq-btn esq-btn--paper" style="font-size:18px;padding:20px 28px;">
+          ENTRAR COM PIN
+        </a>
+      </div>
+
+    </div>
+    <!-- /LEFT -->
+
+    <!-- ── RIGHT: visual ── -->
+    <div class="esq-desktop-right">
+
+      <!-- Starburst behind -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;">
+        <div class="esq-starburst-shape"></div>
+      </div>
+
+      <!-- Floating card 1 — Pergunta (amber, top-left) -->
+      <div class="esq-float-card-1">
+        <div style="transform:rotate(-8deg);width:176px;padding:14px;background:#FFB800;border:4px solid #15110F;border-radius:16px;box-shadow:5px 5px 0 #15110F;">
+          <div class="esq-tag" style="font-size:10px;background:#15110F;color:#FFB800;border-color:#15110F;">❓ PERGUNTA</div>
+          <div class="esq-display" style="font-size:17px;margin-top:8px;line-height:1.15;color:#15110F;">quem da sala mente mais?</div>
+        </div>
+      </div>
+
+      <!-- Floating card 2 — Mico (red, bottom-right) -->
+      <div class="esq-float-card-2">
+        <div style="transform:rotate(6deg);width:176px;padding:14px;background:#FF4757;border:4px solid #15110F;border-radius:16px;box-shadow:5px 5px 0 #15110F;">
+          <div class="esq-tag" style="font-size:10px;background:#15110F;color:#FF4757;border-color:#15110F;">🔥 MICO</div>
+          <div class="esq-display" style="font-size:17px;margin-top:8px;line-height:1.15;color:#FFF4E0;">liga pro ex agora.</div>
+          <div style="margin-top:8px;font-family:'Bagel Fat One',sans-serif;font-size:14px;color:#FFF4E0;">🍻 5 goles</div>
+        </div>
+      </div>
+
+      <!-- Mascot (center, on top of starburst) -->
+      <div style="position:relative;z-index:2;animation:esq-bounce 3s ease-in-out infinite;"
+           data-mascot data-size="220" data-mood="happy"></div>
+
+    </div>
+    <!-- /RIGHT -->
+
+  </div>
+  <!-- /DESKTOP HERO -->
+
+  <!-- ── Footer (shared) ── -->
+  <div style="position:absolute;bottom:24px;left:0;right:0;text-align:center;z-index:2;">
+    <div class="esq-label" style="color:#4D423D;">Feito por PJJunio</div>
+  </div>
+
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+</body>
+</html>

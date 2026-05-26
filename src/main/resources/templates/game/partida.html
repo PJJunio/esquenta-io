@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Partida</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Quiz options (De Boa mode) */
+    .quiz-option {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; padding: 14px 18px;
+      border: 3px solid #15110F; border-radius: 14px;
+      background: #FFFBF2; color: #15110F;
+      font-family: 'Archivo Black', sans-serif; font-size: 15px;
+      cursor: pointer; box-shadow: 4px 4px 0 #15110F;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      text-align: left;
+    }
+    .quiz-option:hover  { transform: translate(-1px,-1px); box-shadow: 5px 5px 0 #15110F; }
+    .quiz-option:active { transform: translate(3px,3px);  box-shadow: 1px 1px 0 #15110F; }
+    .quiz-option .letter {
+      min-width: 32px; height: 32px;
+      background: #15110F; color: #2DD4BF;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 900; flex-shrink: 0;
+    }
+    .quiz-option.correct { background: #2DD4BF; border-color: #15110F; pointer-events: none; }
+    .quiz-option.wrong   { background: #FF4757; color: #FFF4E0; border-color: #15110F; pointer-events: none; }
+    .quiz-option.correct .letter { background: #15110F; color: #2DD4BF; }
+    .quiz-option.wrong   .letter { background: #FFF4E0; color: #FF4757; }
+
+    /* Revelar (De Boa sem opcoes) */
+    .reveal-answer {
+      background: #F5E6C8; border: 3px dashed #15110F;
+      border-radius: 14px; padding: 14px 18px;
+      font-family: 'Bagel Fat One', sans-serif; font-size: 18px;
+      color: #15110F; text-align: center;
+    }
+  </style>
+</head>
+<body style="background:#FFF4E0;color:#15110F;">
+
+<div style="min-height:100vh;background:#FFF4E0;position:relative;display:flex;flex-direction:column;overflow:hidden;">
+  <div class="esq-halftone"></div>
+
+  <!-- TOP BAR: rodada + mini ranking -->
+  <div style="position:relative;z-index:2;padding:clamp(40px,7vh,60px) 14px 0;">
+    <div style="background:#FFFBF2;border:3px solid #15110F;border-radius:18px;box-shadow:4px 4px 0 #15110F;padding:8px 10px;display:flex;align-items:center;gap:10px;">
+      <span class="esq-tag esq-tag--ink" style="font-size:10px;">RODADA <span th:text="${rodadaAtual}">1</span>/<span th:text="${totalRodadas}">12</span></span>
+      <div style="flex:1;display:flex;gap:6px;overflow:hidden;">
+        <div th:each="jogador, iter : ${topJogadores}" th:if="${iter.index < 4}"
+             style="display:flex;align-items:center;gap:4px;border:2px solid #15110F;border-radius:100px;padding:2px 8px 2px 2px;background:#F5E6C8;">
+          <div data-avatar th:data-name="${jogador.nickname}" data-idx="0" data-size="24"></div>
+          <div style="font-family:'Archivo Black',sans-serif;font-size:11px;color:#15110F;max-width:52px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"
+               th:text="${jogador.pontuacao + ' pts'}">0 pts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vez de quem / badge quiz -->
+  <div style="position:relative;z-index:2;display:flex;justify-content:center;margin-top:12px;">
+    <!-- Quiz simultâneo: não tem "vez de" — mostra badge diferente -->
+    <div th:if="${sala.modoJogo.name() == 'DE_BOA' and cartao.isQuizCompleto()}"
+         style="display:flex;align-items:center;gap:8px;background:#15110F;color:#2DD4BF;padding:6px 16px;border-radius:100px;box-shadow:3px 3px 0 #15110F;font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:0.05em;">
+      ⚡ TODOS RESPONDEM AO MESMO TEMPO
+    </div>
+    <!-- Outros modos: mostra quem é o jogador da vez -->
+    <div th:unless="${sala.modoJogo.name() == 'DE_BOA' and cartao.isQuizCompleto()}"
+         style="display:flex;align-items:center;gap:10px;background:#15110F;color:#FFF4E0;padding:5px 14px 5px 5px;border-radius:100px;box-shadow:3px 3px 0 #15110F;">
+      <div data-avatar th:data-name="${jogadorDaVez.nickname}" data-idx="0" data-size="32"></div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:14px;">
+        vez d<span th:if="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">a</span><span th:unless="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">o</span>
+        <span style="color:#FFB800;" th:text="${jogadorDaVez.nickname}">Nick</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       MODO DE BOA - QUIZ
+       ============================================================ -->
+  <div th:if="${sala.modoJogo.name() == 'DE_BOA'}"
+       style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;padding:12px 16px 0;">
+
+    <!-- Cartao quiz -->
+    <div style="background:#2DD4BF;border:4px solid #15110F;border-radius:22px;box-shadow:6px 6px 0 #15110F;padding:18px 18px 20px;position:relative;overflow:hidden;">
+      <!-- Halftone corners -->
+      <div style="position:absolute;top:-16px;right:-16px;width:100px;height:100px;background-image:radial-gradient(#15110F 1.5px,transparent 1.5px);background-size:10px 10px;opacity:0.12;border-radius:50%;"></div>
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+        <div style="background:#15110F;color:#2DD4BF;padding:5px 12px;border-radius:100px;font-family:'Archivo Black',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:0.1em;">📝 QUIZ</div>
+        <div class="esq-label" style="font-size:10px;color:#15110F;">MODO · DE BOA</div>
+      </div>
+
+      <!-- Pergunta -->
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:clamp(20px,4.5vw,28px);line-height:1.1;text-align:center;letter-spacing:-0.01em;color:#15110F;padding:4px 0 16px;"
+           th:text="${cartao.texto}">
+        Texto do cartao
+      </div>
+
+      <!-- Recompensa -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div class="esq-label" style="font-size:9px;color:#15110F;opacity:0.7;">RECOMPENSA</div>
+          <div style="font-family:'Bagel Fat One',sans-serif;font-size:22px;color:#15110F;">+<span th:text="${cartao.pontosRecompensa}">10</span><span style="font-size:12px;margin-left:2px;">pts</span></div>
+        </div>
+        <div th:if="${cartao.tipo.name() == 'MICO' and cartao.goles > 0}"
+             style="display:flex;align-items:center;gap:6px;background:#15110F;padding:4px 10px;border-radius:100px;font-family:'Bagel Fat One',sans-serif;font-size:16px;color:#2DD4BF;">
+          🍻 <span th:text="${cartao.goles}">2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUIZ COM MULTIPLA ESCOLHA — TODOS respondem ao mesmo tempo -->
+    <div th:if="${cartao.isQuizCompleto()}" style="flex:1;display:flex;flex-direction:column;padding:14px 0 30px;">
+      <div class="esq-label" style="font-size:10px;margin-bottom:10px;color:#15110F;opacity:0.65;">ESCOLHA A RESPOSTA CORRETA</div>
+      <div id="quiz-options-container" style="display:flex;flex-direction:column;gap:10px;"></div>
+      <!-- Aguardando outros jogadores (aparece apos responder) -->
+      <div id="quiz-aguardando" style="display:none;margin-top:14px;background:#F5E6C8;border:3px dashed #15110F;border-radius:14px;padding:14px;text-align:center;">
+        <div style="font-size:20px;margin-bottom:4px;">⏳</div>
+        <div class="esq-label" style="font-size:11px;opacity:0.7;">aguardando outros jogadores...</div>
+      </div>
+      <form id="form-acertei" th:action="@{/sala/{id}/resposta-quiz(id=${sala.id})}" method="post" style="display:none;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="sucesso" value="true"/>
+      </form>
+      <form id="form-errei" th:action="@{/sala/{id}/resposta-quiz(id=${sala.id})}" method="post" style="display:none;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="hidden" name="sucesso" value="false"/>
+      </form>
+      <div id="quiz-data"
+           th:data-correta="${cartao.respostaCorreta}"
+           th:data-erradas="${cartao.opcoesErradas}"
+           th:data-sala-id="${sala.id}"
+           style="display:none;"></div>
+    </div>
+
+    <!-- SEM MULTIPLA ESCOLHA — so o jogador da vez ve os controles -->
+    <div th:unless="${cartao.isQuizCompleto()}">
+
+      <!-- E minha vez -->
+      <div th:if="${isMinhaVez}" style="padding:14px 0 30px;display:flex;flex-direction:column;gap:10px;">
+        
+        <!-- PERGUNTA SIM/NÃO -->
+        <div th:if="${cartao.tipo.name() == 'PERGUNTA_SIM_NAO'}" style="display:flex;flex-direction:column;gap:10px;">
+          <div class="esq-label" style="font-size:10px;margin-bottom:4px;opacity:0.65;">RESPONDA: SIM OU NÃO?</div>
+          <div id="sim-nao-data" th:data-correta="${cartao.respostaCorreta}" style="display:none;"></div>
+          <form id="form-sim-nao-acerto" th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post" style="display:none;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="sucesso" value="true"/>
+          </form>
+          <form id="form-sim-nao-erro" th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post" style="display:none;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="sucesso" value="false"/>
+          </form>
+          <button id="btn-sim" type="button" class="esq-btn esq-btn--teal esq-btn--block" style="font-size:20px;padding:18px;">✓ SIM</button>
+          <button id="btn-nao" type="button" class="esq-btn esq-btn--block" style="background:#FF4757;color:#FFF4E0;font-size:20px;padding:18px;">✕ NÃO</button>
+        </div>
+
+        <div th:if="${cartao.tipo.name() != 'PERGUNTA_SIM_NAO' and cartao.hasRespostaCorreta()}" id="reveal-section">
+          <button type="button" onclick="revelarResposta()"
+                  class="esq-btn esq-btn--block esq-btn--ink"
+                  style="font-size:16px;padding:15px;" id="btn-revelar">
+            👁 REVELAR RESPOSTA
+          </button>
+          <div id="answer-box" class="reveal-answer" style="display:none;"
+               th:text="${cartao.respostaCorreta}">resposta</div>
+        </div>
+        <div th:if="${cartao.tipo.name() != 'PERGUNTA_SIM_NAO'}" id="action-btns" th:style="${cartao.hasRespostaCorreta()} ? 'display:none;' : 'display:flex;flex-direction:column;gap:10px;'">
+          <form th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="sucesso" value="true"/>
+            <button type="submit" class="esq-btn esq-btn--teal esq-btn--block" style="font-size:17px;padding:15px;">✓ ACERTEI!</button>
+          </form>
+          <div style="display:flex;gap:10px;">
+            <form th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post" style="flex:1;">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <input type="hidden" name="sucesso" value="false"/>
+              <button type="submit" class="esq-btn esq-btn--block" style="background:#F5E6C8;font-size:13px;padding:12px;width:100%;">✕ ERREI</button>
+            </form>
+            <form th:action="@{/sala/{id}/trocar-carta(id=${sala.id})}" method="post">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+              <button type="submit" class="esq-btn esq-btn--paper" style="font-size:13px;padding:10px 12px;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;">
+                <span>↻ TROCAR</span>
+                <span th:if="${cartao.goles > 0}" style="font-size:10px;opacity:0.65;">🍻 <span th:text="${cartao.goles}">0</span> goles</span>
+                <span th:if="${cartao.goles == 0}" style="font-size:10px;opacity:0.55;">−<span th:text="${cartao.pontosRecompensa}">10</span> pts</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nao e minha vez -->
+      <div th:unless="${isMinhaVez}" style="padding:14px 0 30px;display:flex;flex-direction:column;align-items:center;gap:10px;">
+        <div style="background:#F5E6C8;border:3px dashed #15110F;border-radius:14px;padding:18px 20px;text-align:center;width:100%;">
+          <div style="font-size:22px;margin-bottom:6px;">👀</div>
+          <div class="esq-label" style="font-size:11px;opacity:0.7;">aguardando</div>
+          <div style="font-family:'Archivo Black',sans-serif;font-size:14px;margin-top:4px;">
+            vez d<span th:if="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">a</span><span th:unless="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">o</span>
+            <strong th:text="${jogadorDaVez.nickname}">Nick</strong> responder
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /DE_BOA -->
+
+
+  <!-- ============================================================
+       MODO ESQUENTA - VERDADE OU DESAFIO (card classico)
+       ============================================================ -->
+  <div th:unless="${sala.modoJogo.name() == 'DE_BOA'}"
+       style="position:relative;z-index:2;flex:1;display:flex;align-items:center;justify-content:center;padding:16px 20px;perspective:1000px;">
+    <div class="esq-game-card"
+         th:class="${cartao.tipo.name() == 'PERGUNTA' or cartao.tipo.name() == 'PERGUNTA_SIM_NAO'} ? 'esq-game-card esq-game-card--pergunta' : 'esq-game-card esq-game-card--mico'">
+      <!-- Halftone corners -->
+      <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;background-image:radial-gradient(currentColor 1.5px,transparent 1.5px);background-size:10px 10px;opacity:0.18;border-radius:50%;"></div>
+      <div style="position:absolute;bottom:-30px;left:-30px;width:140px;height:140px;background-image:radial-gradient(currentColor 1.5px,transparent 1.5px);background-size:10px 10px;opacity:0.12;border-radius:50%;"></div>
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div th:if="${cartao.tipo.name() == 'PERGUNTA'}" style="background:#15110F;color:#FFB800;padding:5px 12px;border-radius:100px;font-family:'Archivo Black',sans-serif;font-size:14px;text-transform:uppercase;letter-spacing:0.1em;">🗣️ VERDADE</div>
+        <div th:if="${cartao.tipo.name() == 'PERGUNTA_SIM_NAO'}" style="background:#15110F;color:#2DD4BF;padding:5px 12px;border-radius:100px;font-family:'Archivo Black',sans-serif;font-size:14px;text-transform:uppercase;letter-spacing:0.1em;">✅ SIM / NÃO</div>
+        <div th:if="${cartao.tipo.name() == 'MICO'}" style="background:#15110F;color:#FF4757;padding:5px 12px;border-radius:100px;font-family:'Archivo Black',sans-serif;font-size:14px;text-transform:uppercase;letter-spacing:0.1em;">🃏 MICO</div>
+        <div class="esq-label" style="font-size:10px;">MODO · ESQUENTA</div>
+      </div>
+
+      <!-- Body -->
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:12px 0;">
+        <div style="font-family:'Bagel Fat One',sans-serif;font-size:clamp(22px,5vw,30px);line-height:1.05;text-align:center;letter-spacing:-0.01em;"
+             th:text="${cartao.texto}">
+          Texto do cartao
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div th:if="${cartao.tipo.name() == 'PERGUNTA' or cartao.tipo.name() == 'PERGUNTA_SIM_NAO'}" style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px;">
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div class="esq-label" style="font-size:10px;">RECOMPENSA</div>
+          <div style="font-family:'Bagel Fat One',sans-serif;font-size:26px;">+<span th:text="${cartao.pontosRecompensa}">10</span><span style="font-size:14px;margin-left:2px;">pts</span></div>
+        </div>
+        <div th:if="${cartao.goles > 0}" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <div class="esq-label" style="font-size:10px;">SE RECUSAR</div>
+          <div style="display:flex;align-items:center;gap:6px;background:#15110F;padding:4px 10px;border-radius:100px;font-family:'Bagel Fat One',sans-serif;font-size:18px;"
+               th:style="${cartao.tipo.name() == 'PERGUNTA' or cartao.tipo.name() == 'PERGUNTA_SIM_NAO'} ? 'background:#15110F;color:#FFB800' : 'background:#15110F;color:#FF4757'">
+            🍻 <span th:text="${cartao.goles}">2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timer (sempre visivel) -->
+  <div style="position:relative;z-index:2;padding:0 24px 14px;">
+    <div class="esq-timer">
+      <div class="esq-label" style="color:#15110F;">TURNO</div>
+      <div class="esq-timer__bar-track">
+        <div class="esq-timer__bar-fill" id="esq-timer-bar" data-seconds="30"></div>
+      </div>
+      <div class="esq-timer__circle" id="esq-timer-num">30</div>
+    </div>
+  </div>
+
+  <!-- Action buttons - ESQUENTA (so o jogador da vez ve) -->
+  <div th:unless="${sala.modoJogo.name() == 'DE_BOA'}"
+       style="position:relative;z-index:2;padding:0 24px 36px;display:flex;flex-direction:column;gap:10px;">
+
+    <!-- E minha vez: botoes de acao -->
+    <div th:if="${isMinhaVez}" style="display:flex;flex-direction:column;gap:10px;">
+
+      <!-- PERGUNTA / PERGUNTA_SIM_NAO: RESPONDIDO + PAGAR MICO + TROCAR -->
+      <div th:if="${cartao.tipo.name() == 'PERGUNTA' or cartao.tipo.name() == 'PERGUNTA_SIM_NAO'}"
+           style="display:flex;flex-direction:column;gap:10px;">
+        <!-- RESPONDIDO -->
+        <form th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="sucesso" value="true"/>
+          <button type="submit" class="esq-btn esq-btn--teal esq-btn--block" style="font-size:17px;padding:15px;">✓ RESPONDIDO</button>
+        </form>
+        <!-- PAGAR MICO + TROCAR -->
+        <div style="display:flex;gap:10px;">
+          <form th:action="@{/sala/{id}/escolher-mico(id=${sala.id})}" method="post" style="flex:1;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="esq-btn esq-btn--block" style="background:#FF4757;color:#FFF4E0;font-size:13px;padding:12px;width:100%;">🃏 PAGAR MICO</button>
+          </form>
+          <form th:action="@{/sala/{id}/trocar-carta(id=${sala.id})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="esq-btn esq-btn--paper" style="font-size:13px;padding:10px 12px;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;">
+              <span>↻ TROCAR</span>
+              <span th:if="${cartao.goles > 0}" style="font-size:10px;opacity:0.65;">🍻 <span th:text="${cartao.goles}">0</span> goles</span>
+              <span th:if="${cartao.goles == 0}" style="font-size:10px;opacity:0.55;">−<span th:text="${cartao.pontosRecompensa}">10</span> pts</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- MICO: CUMPRI + RECUSEI + TROCAR -->
+      <div th:if="${cartao.tipo.name() == 'MICO'}" style="display:flex;flex-direction:column;gap:10px;">
+        <form th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <input type="hidden" name="sucesso" value="true"/>
+          <button type="submit" class="esq-btn esq-btn--teal esq-btn--block" style="font-size:17px;padding:15px;">✓ CUMPRI O MICO!</button>
+        </form>
+        <div style="display:flex;gap:10px;">
+          <form th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post" style="flex:1;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="sucesso" value="false"/>
+            <button type="submit" class="esq-btn esq-btn--block" style="background:#F5E6C8;font-size:13px;padding:12px;width:100%;">✕ RECUSEI</button>
+          </form>
+          <form th:action="@{/sala/{id}/trocar-carta(id=${sala.id})}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="esq-btn esq-btn--paper" style="font-size:13px;padding:10px 12px;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;">
+              <span>↻ TROCAR</span>
+              <span th:if="${cartao.goles > 0}" style="font-size:10px;opacity:0.65;">🍻 <span th:text="${cartao.goles}">0</span> goles</span>
+              <span th:if="${cartao.goles == 0}" style="font-size:10px;opacity:0.55;">−<span th:text="${cartao.pontosRecompensa}">10</span> pts</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Nao e minha vez: aguardando -->
+    <div th:unless="${isMinhaVez}"
+         style="background:#F5E6C8;border:3px dashed #15110F;border-radius:14px;padding:18px 20px;text-align:center;">
+      <div style="font-size:22px;margin-bottom:6px;">👀</div>
+      <div class="esq-label" style="font-size:11px;opacity:0.7;">aguardando</div>
+      <div style="font-family:'Archivo Black',sans-serif;font-size:14px;margin-top:4px;">
+        vez d<span th:if="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">a</span><span th:unless="${#strings.startsWith(jogadorDaVez.nickname,'A') or #strings.startsWith(jogadorDaVez.nickname,'E') or #strings.startsWith(jogadorDaVez.nickname,'I') or #strings.startsWith(jogadorDaVez.nickname,'O') or #strings.startsWith(jogadorDaVez.nickname,'U')}">o</span>
+        <strong th:text="${jogadorDaVez.nickname}">Nick</strong> responder
+      </div>
+    </div>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+
+<!-- Form oculto para timeout automático (timer chega a 0) -->
+<form id="form-timeout" th:action="@{/sala/{id}/resultado(id=${sala.id})}" method="post" style="display:none;">
+  <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+  <input type="hidden" name="sucesso" value="false"/>
+</form>
+
+<!-- WebSocket unificado: recompensa, penalidade, card-ready, next-turn, game-over, round-over -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@6/bundles/stomp.umd.min.js"></script>
+<script th:inline="javascript">
+(function () {
+  const salaId     = /*[[${sala.id}]]*/ 1;
+  const isMinhaVez = /*[[${isMinhaVez}]]*/ false;
+  const ehDeBoaQuiz = /*[[${sala.modoJogo.name() == 'DE_BOA' and cartao.isQuizCompleto()}]]*/ false;
+  let quizRespondido = false;
+  let navegando = false; // evita duplo redirect
+
+  function ir(url) {
+    if (navegando) return;
+    navegando = true;
+    window.location.href = url;
+  }
+
+  // Callback do timer (definido antes do components.js rodar)
+  window.onTimerExpired = function () {
+    if (ehDeBoaQuiz) {
+      // DE_BOA quiz: timer expirou → conta como erro para este jogador (todos respondem)
+      if (!quizRespondido && !navegando) {
+        quizRespondido = true;
+        document.getElementById('form-errei').submit();
+      }
+      // Se já respondeu, aguarda round-over via WS — não faz nada
+    } else if (isMinhaVez && !navegando) {
+      // ESQUENTA / jogador da vez: submete falha automática
+      document.getElementById('form-timeout').submit();
+    } else if (!isMinhaVez) {
+      // Aguarda WS do jogador da vez — se não chegar em 3s, vai pro sorteio
+      setTimeout(() => ir('/sala/' + salaId + '/sorteio'), 3000);
+    }
+  };
+
+  // Expõe flag para quiz JS marcar quando responder
+  window._quizRespondido = function () { quizRespondido = true; };
+
+  const ws = new StompJs.Client({
+    webSocketFactory: () => new SockJS('/ws'),
+    reconnectDelay: 3000,
+  });
+
+  ws.onConnect = () => {
+    ws.subscribe('/topic/partida/' + salaId, (msg) => {
+      try {
+        const d = JSON.parse(msg.body);
+        if (d.type === 'recompensa' && d.cartaoId) {
+          ir('/sala/' + salaId + '/recompensa?cartaoId=' + d.cartaoId + '&jogadorId=' + d.jogadorId);
+        } else if (d.type === 'penalidade' && d.cartaoId) {
+          ir('/sala/' + salaId + '/penalidade?cartaoId=' + d.cartaoId + '&jogadorId=' + d.jogadorId);
+        } else if (d.type === 'card-ready') {
+          ir('/sala/' + salaId + '/partida');
+        } else if (d.type === 'next-turn') {
+          ir('/sala/' + salaId + '/sorteio');
+        } else if (d.type === 'game-over') {
+          ir('/sala/' + salaId + '/podio');
+        } else if (d.type === 'round-over' && !quizRespondido) {
+          // Quiz: jogador não respondeu a tempo
+          ir('/sala/' + salaId + '/sorteio');
+        }
+      } catch (e) {}
+    });
+  };
+
+  ws.activate();
+})();
+</script>
+
+<script>
+// Quiz com multipla escolha
+(function () {
+  const dataEl = document.getElementById('quiz-data');
+  if (!dataEl) return;
+
+  const correta   = dataEl.dataset.correta;
+  const erradas   = dataEl.dataset.erradas ? dataEl.dataset.erradas.split('§') : [];
+  const container = document.getElementById('quiz-options-container');
+  const aguardando = document.getElementById('quiz-aguardando');
+  if (!container) return;
+
+  const todas = [correta, ...erradas].filter(Boolean);
+  // Embaralha
+  for (let i = todas.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [todas[i], todas[j]] = [todas[j], todas[i]];
+  }
+
+  const letras = ['A', 'B', 'C', 'D'];
+  let respondido = false;
+
+  todas.forEach((opcao, idx) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'quiz-option';
+    btn.innerHTML = '<span class="letter">' + letras[idx] + '</span><span>' + opcao + '</span>';
+    btn.addEventListener('click', () => {
+      if (respondido) return;
+      respondido = true;
+
+      // Avisa WS listener que ja respondeu
+      if (typeof window._quizRespondido === 'function') window._quizRespondido();
+
+      const acertou = (opcao === correta);
+      // Marca visual
+      container.querySelectorAll('.quiz-option').forEach(b => {
+        const txt = b.querySelector('span:last-child').textContent;
+        if (txt === correta) b.classList.add('correct');
+        else if (b === btn && !acertou) b.classList.add('wrong');
+        b.disabled = true;
+      });
+      // Mostra aguardando
+      if (aguardando) aguardando.style.display = 'block';
+      // Submete apos pausa para ver o resultado visual
+      setTimeout(() => {
+        document.getElementById(acertou ? 'form-acertei' : 'form-errei').submit();
+      }, 1400);
+    });
+    container.appendChild(btn);
+  });
+})();
+
+// Revelar resposta (De Boa sem opcoes)
+function revelarResposta() {
+  document.getElementById('btn-revelar').style.display  = 'none';
+  document.getElementById('answer-box').style.display   = 'block';
+  document.getElementById('action-btns').style.display  = 'flex';
+  document.getElementById('action-btns').style.flexDirection = 'column';
+  document.getElementById('action-btns').style.gap = '10px';
+}
+
+// SIM / NÃO
+(function() {
+  const dataEl = document.getElementById('sim-nao-data');
+  if (!dataEl) return;
+  const correta = (dataEl.dataset.correta || '').trim().toUpperCase();
+  const btnSim = document.getElementById('btn-sim');
+  const btnNao = document.getElementById('btn-nao');
+  if (btnSim) btnSim.addEventListener('click', () => {
+    document.getElementById(correta === 'SIM' ? 'form-sim-nao-acerto' : 'form-sim-nao-erro').submit();
+  });
+  if (btnNao) btnNao.addEventListener('click', () => {
+    document.getElementById(correta === 'NÃO' || correta === 'NAO' ? 'form-sim-nao-acerto' : 'form-sim-nao-erro').submit();
+  });
+})();
+
+// WS unificado já está no bloco acima — nada adicional necessário aqui
+</script>
+</body>
+</html>

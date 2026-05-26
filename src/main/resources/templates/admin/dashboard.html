@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Admin</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="background:#FFF4E0;color:#15110F;">
+
+<!-- TOP BAR -->
+<div class="esq-admin-topbar">
+  <div style="font-family:'Bagel Fat One',sans-serif;font-size:26px;color:#FFB800;line-height:1;">
+    esquenta<span style="color:#FFF4E0;">.io</span>
+  </div>
+  <span class="esq-tag esq-tag--red" style="font-size:10px;">ADMIN</span>
+  <div style="flex:1;"></div>
+  <div style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;letter-spacing:0.1em;">
+    <span>OLÁ, <span sec:authentication="name">ADMIN</span></span>
+    <form th:action="@{/logout}" method="post" style="margin:0;">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+      <button type="submit" style="background:#FFFBF2;color:#15110F;border:none;border-radius:100px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:11px;font-weight:700;letter-spacing:0.08em;">SAIR</button>
+    </form>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div style="padding:26px;display:flex;flex-direction:column;gap:20px;max-width:1100px;margin:0 auto;">
+
+  <!-- Title + ação -->
+  <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
+    <div class="esq-display" style="font-size:clamp(32px,5vw,48px);line-height:1;">
+      gerenciar <span style="color:#FF4757;">cartões</span>
+    </div>
+    <div style="flex:1;"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-self:center;">
+      <button type="button" class="esq-btn esq-btn--small" style="background:#2DD4BF;color:#15110F;" onclick="abrirModalCriarComTipo('PERGUNTA')">❓ Pergunta</button>
+      <button type="button" class="esq-btn esq-btn--small" style="background:#FFB800;color:#15110F;" onclick="abrirModalCriarComTipo('PERGUNTA_SIM_NAO')">✅ Sim / Não</button>
+      <button type="button" class="esq-btn esq-btn--small esq-btn--red" onclick="abrirModalCriarComTipo('MICO')">🃏 Mico</button>
+      <form th:action="@{/admin/cartoes/seed}" method="post" style="margin:0;">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit" class="esq-btn esq-btn--small" style="background:#6B2C8A;color:#FFF4E0;"
+                onclick="return confirm('Adicionar pacote de perguntas e micos de exemplo?')">🌱 SEED</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stats cards -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+    <div style="background:#FFFBF2;border:3px solid #15110F;border-radius:16px;padding:14px;box-shadow:4px 4px 0 #15110F;">
+      <div class="esq-label" style="opacity:0.7;">TOTAL</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:38px;line-height:1;margin-top:4px;" th:text="${totalCartoes}">0</div>
+    </div>
+    <div style="background:#FFB800;border:3px solid #15110F;border-radius:16px;padding:14px;box-shadow:4px 4px 0 #15110F;">
+      <div class="esq-label" style="opacity:0.7;">PERGUNTAS</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:38px;line-height:1;margin-top:4px;" th:text="${totalPerguntas}">0</div>
+    </div>
+    <div style="background:#FF4757;color:#FFF4E0;border:3px solid #15110F;border-radius:16px;padding:14px;box-shadow:4px 4px 0 #15110F;">
+      <div class="esq-label" style="opacity:0.7;">MICOS</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:38px;line-height:1;margin-top:4px;" th:text="${totalMicos}">0</div>
+    </div>
+    <div style="background:#2DD4BF;border:3px solid #15110F;border-radius:16px;padding:14px;box-shadow:4px 4px 0 #15110F;">
+      <div class="esq-label" style="opacity:0.7;">P/ ESQUENTA</div>
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:38px;line-height:1;margin-top:4px;" th:text="${totalEsquenta}">0</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div style="background:#FFFBF2;border:3px solid #15110F;border-radius:16px;padding:14px;box-shadow:4px 4px 0 #15110F;display:flex;flex-direction:column;gap:12px;">
+
+    <!-- Busca — submete preservando os filtros ativos -->
+    <form th:action="@{/admin/cartoes}" method="get" style="display:flex;gap:8px;align-items:center;">
+      <input type="hidden" name="tipo" th:value="${filterTipo}">
+      <input type="hidden" name="modo" th:value="${filterModo}">
+      <input class="esq-input" name="q" placeholder="🔍 buscar cartão..."
+             th:value="${q}" style="flex:1;box-shadow:none;border-width:2px;margin:0;">
+      <button type="submit" class="esq-btn esq-btn--small esq-btn--ink" style="flex-shrink:0;">BUSCAR</button>
+    </form>
+
+    <!-- Separador -->
+    <div style="border-top:2px dashed rgba(21,17,15,0.15);"></div>
+
+    <!-- Filtros de tipo + modo como links — cada clique preserva o outro filtro -->
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;">
+
+      <!-- Tipo -->
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;opacity:0.5;text-transform:uppercase;white-space:nowrap;">TIPO</span>
+        <div style="display:flex;gap:4px;">
+          <a th:href="@{/admin/cartoes(q=${q},tipo='TODOS',modo=${filterModo})}"
+             th:style="${filterTipo == 'TODOS'} ? 'background:#15110F;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">TODOS</a>
+          <a th:href="@{/admin/cartoes(q=${q},tipo='PERGUNTA',modo=${filterModo})}"
+             th:style="${filterTipo == 'PERGUNTA'} ? 'background:#15110F;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">❓ PERGUNTA</a>
+          <a th:href="@{/admin/cartoes(q=${q},tipo='PERGUNTA_SIM_NAO',modo=${filterModo})}"
+             th:style="${filterTipo == 'PERGUNTA_SIM_NAO'} ? 'background:#15110F;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">✅ SIM/NÃO</a>
+          <a th:href="@{/admin/cartoes(q=${q},tipo='MICO',modo=${filterModo})}"
+             th:style="${filterTipo == 'MICO'} ? 'background:#15110F;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">🔥 MICO</a>
+        </div>
+      </div>
+
+      <!-- Divisor vertical -->
+      <div style="width:2px;height:28px;background:rgba(21,17,15,0.15);border-radius:2px;"></div>
+
+      <!-- Modo -->
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;opacity:0.5;text-transform:uppercase;white-space:nowrap;">MODO</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <a th:href="@{/admin/cartoes(q=${q},tipo=${filterTipo},modo='TODOS')}"
+             th:style="${filterModo == 'TODOS'} ? 'background:#FF4757;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">TODOS</a>
+          <a th:href="@{/admin/cartoes(q=${q},tipo=${filterTipo},modo='DE_BOA')}"
+             th:style="${filterModo == 'DE_BOA'} ? 'background:#FF4757;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">🧊 DE BOA</a>
+          <a th:href="@{/admin/cartoes(q=${q},tipo=${filterTipo},modo='ESQUENTA')}"
+             th:style="${filterModo == 'ESQUENTA'} ? 'background:#FF4757;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">🔥 ESQUENTA</a>
+          <a th:href="@{/admin/cartoes(q=${q},tipo=${filterTipo},modo='AMBOS')}"
+             th:style="${filterModo == 'AMBOS'} ? 'background:#FF4757;color:#FFF4E0;' : 'background:#F5E6C8;color:#15110F;'"
+             style="display:inline-flex;align-items:center;border:2px solid #15110F;border-radius:10px;padding:7px 12px;font-family:'Archivo Black',sans-serif;font-size:11px;text-transform:uppercase;text-decoration:none;white-space:nowrap;transition:opacity .1s;">🌐 AMBOS</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Cards table -->
+  <div style="background:#FFFBF2;border:3px solid #15110F;border-radius:16px;box-shadow:4px 4px 0 #15110F;overflow:hidden;">
+    <!-- Header -->
+    <div style="display:grid;grid-template-columns:1fr 110px 130px 80px 90px 120px;gap:12px;padding:10px 16px;background:#F5E6C8;border-bottom:3px solid #15110F;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#2A2421;align-items:center;">
+      <div>texto</div>
+      <div style="text-align:center;">tipo</div>
+      <div style="text-align:center;">modo</div>
+      <div style="text-align:center;">goles</div>
+      <div style="text-align:center;">pontos</div>
+      <div style="text-align:center;">ações</div>
+    </div>
+
+    <!-- Rows -->
+    <div th:each="cartao : ${cartoes}"
+         th:data-id="${cartao.id}"
+         th:data-texto="${cartao.texto}"
+         th:data-tipo="${cartao.tipo.name()}"
+         th:data-modo="${cartao.modoRestrito.name()}"
+         th:data-goles="${cartao.goles}"
+         th:data-pontos="${cartao.pontosRecompensa}"
+         th:data-resposta="${cartao.respostaCorreta}"
+         th:data-opcoes="${cartao.opcoesErradas}"
+         style="display:grid;grid-template-columns:1fr 110px 130px 80px 90px 120px;gap:12px;padding:12px 16px;border-bottom:2px dashed rgba(26,22,20,0.15);align-items:center;">
+
+      <div style="font-size:14px;line-height:1.3;font-weight:500;color:#15110F;" th:text="${cartao.texto}">Texto</div>
+
+      <div style="display:flex;justify-content:center;">
+        <span th:if="${cartao.tipo.name() == 'PERGUNTA'}" class="esq-tag esq-tag--amber" style="font-size:10px;">❓ PERG.</span>
+        <span th:if="${cartao.tipo.name() == 'PERGUNTA_SIM_NAO'}" class="esq-tag" style="font-size:10px;background:#FFB800;border-color:#15110F;">✅ S/N</span>
+        <span th:if="${cartao.tipo.name() == 'MICO'}" class="esq-tag esq-tag--red" style="font-size:10px;">🔥 MICO</span>
+      </div>
+
+      <div style="display:flex;justify-content:center;">
+        <span class="esq-tag" style="font-size:10px;"
+              th:style="${cartao.modoRestrito.name() == 'ESQUENTA'} ? 'background:#FF4757;color:#FFF4E0;border-color:#15110F;' : (${cartao.modoRestrito.name() == 'DE_BOA'} ? 'background:#2DD4BF;' : 'background:#F5E6C8;')"
+              th:text="${cartao.modoRestrito.name().replace('_',' ')}">MODO</span>
+      </div>
+
+      <div style="text-align:center;font-family:'Bagel Fat One',sans-serif;font-size:18px;color:#15110F;">
+        <span th:if="${cartao.goles > 0}" th:text="'🍻' + ${cartao.goles}">—</span>
+        <span th:unless="${cartao.goles > 0}">—</span>
+      </div>
+
+      <div style="text-align:center;font-family:'Bagel Fat One',sans-serif;font-size:18px;color:#FF4757;"
+           th:text="'+' + ${cartao.pontosRecompensa}">+10</div>
+
+      <div style="display:flex;gap:6px;justify-content:center;">
+        <button type="button" class="esq-btn esq-btn--small"
+                style="background:#F5E6C8;"
+                onclick="abrirModalEditar(this.closest('[data-id]'))">EDIT</button>
+        <form th:action="@{/admin/cartoes/{id}/deletar(id=${cartao.id})}" method="post" style="margin:0;"
+              onsubmit="return confirm('Deletar este cartão?')">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+          <button type="submit" class="esq-btn esq-btn--small" style="background:#FF4757;color:#FFF4E0;">×</button>
+        </form>
+      </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(cartoes)}" style="padding:30px;text-align:center;color:#4D423D;font-family:'Space Grotesk',sans-serif;">
+      Nenhum cartão encontrado. Bora criar um?
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL — CRIAR CARTÃO
+     ═══════════════════════════════════════════════════ -->
+<div id="modalCriar" role="dialog" aria-modal="true" aria-labelledby="modalCriarTitulo"
+     style="display:none;position:fixed;inset:0;z-index:100;background:rgba(21,17,15,0.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#FFFBF2;border:3px solid #15110F;border-radius:22px;box-shadow:6px 6px 0 #15110F;width:100%;max-width:520px;overflow:hidden;">
+
+    <!-- Modal header -->
+    <div style="background:#FF4757;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #15110F;">
+      <div id="modalCriarTitulo" style="font-family:'Bagel Fat One',sans-serif;font-size:22px;color:#FFF4E0;line-height:1;">
+        novo cartão 🃏
+      </div>
+      <button type="button" onclick="fecharModalCriar()"
+              style="background:#FFF4E0;border:2px solid #15110F;border-radius:100px;width:32px;height:32px;cursor:pointer;font-weight:900;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+
+    <!-- Modal body -->
+    <form th:action="@{/admin/cartoes/criar}" method="post" style="padding:22px;display:flex;flex-direction:column;gap:16px;">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+      <!-- Texto -->
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Texto do cartão *</label>
+        <textarea name="texto" required rows="3"
+                  placeholder="Ex: Qual é a capital do Brasil?"
+                  style="width:100%;padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;resize:vertical;outline:none;"></textarea>
+      </div>
+
+      <!-- Tipo + Modo -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Tipo *</label>
+          <select id="criarTipo" name="tipo" required onchange="onCriarTipoChange(this.value)"
+                  style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;outline:none;">
+            <option value="PERGUNTA">❓ Pergunta</option>
+            <option value="PERGUNTA_SIM_NAO">✅ Sim / Não</option>
+            <option value="MICO">🔥 Mico</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Modo *</label>
+          <select id="criarModo" name="modoRestrito" required onchange="toggleCriarGoles(this.value)"
+                  style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;outline:none;">
+            <option value="AMBOS">🌐 Ambos</option>
+            <option value="DE_BOA">🧊 De Boa</option>
+            <option value="ESQUENTA">🔥 Esquenta</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Goles + Pontos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div id="criarGolesWrapper" style="display:none;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Goles p/ trocar 🍻</label>
+          <input type="number" name="goles" value="0" min="0" max="20"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;outline:none;"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label id="criarPontosLabel" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Pontos ⭐</label>
+          <input type="number" name="pontosRecompensa" value="10" min="0" max="100"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;outline:none;"/>
+        </div>
+      </div>
+
+      <!-- Quiz (De Boa) — aparece só quando modo é DE_BOA ou AMBOS -->
+      <div id="criarQuizWrapper" style="display:none;border-top:2px dashed rgba(21,17,15,0.2);padding-top:14px;flex-direction:column;gap:12px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;opacity:0.5;">📝 QUIZ — Modo De Boa (opcional)</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Resposta Correta</label>
+          <input type="text" name="respostaCorreta" placeholder="Ex: Brasília"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;outline:none;"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Opções Erradas</label>
+          <input type="text" name="opcoesErradas" placeholder="Ex: São Paulo§Rio de Janeiro§Salvador"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;outline:none;"/>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;opacity:0.5;letter-spacing:0.06em;">Separe as opções com § (até 3 alternativas erradas)</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;">
+        <button type="button" onclick="fecharModalCriar()" class="esq-btn esq-btn--small" style="background:#F5E6C8;">CANCELAR</button>
+        <button type="submit" class="esq-btn esq-btn--small esq-btn--red">CRIAR CARTÃO</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MODAL — EDITAR CARTÃO
+     ═══════════════════════════════════════════════════ -->
+<div id="modalEditar" role="dialog" aria-modal="true" aria-labelledby="modalEditarTitulo"
+     style="display:none;position:fixed;inset:0;z-index:100;background:rgba(21,17,15,0.6);backdrop-filter:blur(2px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#FFFBF2;border:3px solid #15110F;border-radius:22px;box-shadow:6px 6px 0 #15110F;width:100%;max-width:520px;overflow:hidden;">
+
+    <!-- Modal header -->
+    <div style="background:#FFB800;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #15110F;">
+      <div id="modalEditarTitulo" style="font-family:'Bagel Fat One',sans-serif;font-size:22px;color:#15110F;line-height:1;">
+        editar cartão ✏️
+      </div>
+      <button type="button" onclick="fecharModalEditar()"
+              style="background:#FFF4E0;border:2px solid #15110F;border-radius:100px;width:32px;height:32px;cursor:pointer;font-weight:900;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+
+    <!-- Modal body -->
+    <form id="formEditar" method="post" style="padding:22px;display:flex;flex-direction:column;gap:16px;">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+      <!-- Texto -->
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Texto do cartão *</label>
+        <textarea id="editTexto" name="texto" required rows="3"
+                  placeholder="Ex: Qual é a capital do Brasil?"
+                  style="width:100%;padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;resize:vertical;outline:none;"></textarea>
+      </div>
+
+      <!-- Tipo + Modo -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Tipo *</label>
+          <select id="editTipo" name="tipo" required onchange="onEditarTipoChange(this.value)"
+                  style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;outline:none;">
+            <option value="PERGUNTA">❓ Pergunta</option>
+            <option value="PERGUNTA_SIM_NAO">✅ Sim / Não</option>
+            <option value="MICO">🔥 Mico</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Modo *</label>
+          <select id="editModo" name="modoRestrito" required onchange="toggleEditGoles(this.value)"
+                  style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;outline:none;">
+            <option value="AMBOS">🌐 Ambos</option>
+            <option value="DE_BOA">🧊 De Boa</option>
+            <option value="ESQUENTA">🔥 Esquenta</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Goles + Pontos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div id="editGolesWrapper" style="display:none;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Goles 🍻</label>
+          <input id="editGoles" type="number" name="goles" value="0" min="0" max="20"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;outline:none;"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label id="editPontosLabel" style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Pontos ⭐</label>
+          <input id="editPontos" type="number" name="pontosRecompensa" value="10" min="0" max="100"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;outline:none;"/>
+        </div>
+      </div>
+
+      <!-- Quiz (De Boa) — aparece só quando modo é DE_BOA ou AMBOS -->
+      <div id="editQuizWrapper" style="display:none;border-top:2px dashed rgba(21,17,15,0.2);padding-top:14px;flex-direction:column;gap:12px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;opacity:0.5;">📝 QUIZ — Modo De Boa (opcional)</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Resposta Correta</label>
+          <input id="editRespostaCorreta" type="text" name="respostaCorreta" placeholder="Ex: Brasília"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;outline:none;"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Opções Erradas</label>
+          <input id="editOpcoesErradas" type="text" name="opcoesErradas" placeholder="Ex: São Paulo§Rio de Janeiro§Salvador"
+                 style="padding:10px 14px;border:2px solid #15110F;border-radius:10px;background:#FFF4E0;font-family:'Space Grotesk',sans-serif;font-size:14px;outline:none;"/>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;opacity:0.5;letter-spacing:0.06em;">Separe as opções com § (até 3 alternativas erradas)</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;">
+        <button type="button" onclick="fecharModalEditar()" class="esq-btn esq-btn--small" style="background:#F5E6C8;">CANCELAR</button>
+        <button type="submit" class="esq-btn esq-btn--small" style="background:#FFB800;">SALVAR</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+<script>
+  // ── toggle goles + quiz ───────────────────────────────────────────────────
+  function toggleCriarGoles(val) {
+    const goles = document.getElementById('criarGolesWrapper');
+    const quiz  = document.getElementById('criarQuizWrapper');
+    goles.style.display = (val === 'ESQUENTA' || val === 'AMBOS') ? 'flex' : 'none';
+    quiz.style.display  = (val === 'DE_BOA'   || val === 'AMBOS') ? 'flex' : 'none';
+  }
+  function toggleEditGoles(val) {
+    const goles = document.getElementById('editGolesWrapper');
+    const quiz  = document.getElementById('editQuizWrapper');
+    goles.style.display = (val === 'ESQUENTA' || val === 'AMBOS') ? 'flex' : 'none';
+    quiz.style.display  = (val === 'DE_BOA'   || val === 'AMBOS') ? 'flex' : 'none';
+  }
+
+  function onCriarTipoChange(tipo) {
+    const modoSelect  = document.getElementById('criarModo');
+    const golesWrapper = document.getElementById('criarGolesWrapper');
+    const quizWrapper  = document.getElementById('criarQuizWrapper');
+    const pontosLabel  = document.getElementById('criarPontosLabel');
+
+    if (tipo === 'MICO' || tipo === 'PERGUNTA_SIM_NAO') {
+      // Ambos são exclusivos do modo ESQUENTA
+      modoSelect.value = 'ESQUENTA';
+      modoSelect.disabled = true;
+      modoSelect.style.pointerEvents = 'none';
+      modoSelect.style.opacity = '0.7';
+      golesWrapper.style.display = 'flex';
+      quizWrapper.style.display = 'none';
+      if (pontosLabel) pontosLabel.textContent = tipo === 'MICO' ? 'Penalidade 📉' : 'Pontos ⭐';
+    } else {
+      modoSelect.disabled = false;
+      modoSelect.style.pointerEvents = 'auto';
+      modoSelect.style.opacity = '1';
+      toggleCriarGoles(modoSelect.value);
+      if (pontosLabel) pontosLabel.textContent = 'Pontos ⭐';
+    }
+  }
+
+  function onEditarTipoChange(tipo) {
+    const modoSelect  = document.getElementById('editModo');
+    const golesWrapper = document.getElementById('editGolesWrapper');
+    const quizWrapper  = document.getElementById('editQuizWrapper');
+    const pontosLabel  = document.getElementById('editPontosLabel');
+
+    if (tipo === 'MICO' || tipo === 'PERGUNTA_SIM_NAO') {
+      modoSelect.value = 'ESQUENTA';
+      modoSelect.disabled = true;
+      modoSelect.style.pointerEvents = 'none';
+      modoSelect.style.opacity = '0.7';
+      golesWrapper.style.display = 'flex';
+      quizWrapper.style.display = 'none';
+      if (pontosLabel) pontosLabel.textContent = tipo === 'MICO' ? 'Penalidade 📉' : 'Pontos ⭐';
+    } else {
+      modoSelect.disabled = false;
+      modoSelect.style.pointerEvents = 'auto';
+      modoSelect.style.opacity = '1';
+      toggleEditGoles(modoSelect.value);
+      if (pontosLabel) pontosLabel.textContent = 'Pontos ⭐';
+    }
+  }
+
+  // Permite enviar inputs "disabled" mudando pra readonly onsubmit (hack pro select)
+  document.querySelector('#modalCriar form').addEventListener('submit', function() {
+    document.getElementById('criarModo').disabled = false;
+  });
+  document.querySelector('#formEditar').addEventListener('submit', function() {
+    document.getElementById('editModo').disabled = false;
+  });
+
+  // ── helpers de modal ───────────────────────────────────────────────────────
+  function abrirModalCriar() {
+    abrirModalCriarComTipo('PERGUNTA');
+  }
+
+  function abrirModalCriarComTipo(tipo) {
+    const m = document.getElementById('modalCriar');
+    document.getElementById('criarModo').value = (tipo === 'MICO' || tipo === 'PERGUNTA_SIM_NAO') ? 'ESQUENTA' : 'AMBOS';
+    document.getElementById('criarTipo').value = tipo;
+    onCriarTipoChange(tipo);
+    m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    m.querySelector('textarea').focus();
+  }
+
+  function fecharModalCriar() {
+    document.getElementById('modalCriar').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  function abrirModalEditar(row) {
+    const id      = row.dataset.id;
+    const texto   = row.dataset.texto;
+    const tipo    = row.dataset.tipo;
+    const modo    = row.dataset.modo;
+    const goles   = row.dataset.goles;
+    const pontos  = row.dataset.pontos;
+    const resposta = row.dataset.resposta || '';
+    const opcoes  = row.dataset.opcoes || '';
+
+    document.getElementById('formEditar').action        = '/admin/cartoes/' + id + '/editar';
+    document.getElementById('editTexto').value          = texto;
+    document.getElementById('editTipo').value           = tipo;
+    document.getElementById('editModo').value           = modo;
+    
+    document.getElementById('editGoles').value          = goles;
+    document.getElementById('editPontos').value         = pontos;
+    document.getElementById('editRespostaCorreta').value = resposta;
+    document.getElementById('editOpcoesErradas').value  = opcoes;
+
+    onEditarTipoChange(tipo);
+
+    const m = document.getElementById('modalEditar');
+    m.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    document.getElementById('editTexto').focus();
+  }
+
+  function fecharModalEditar() {
+    document.getElementById('modalEditar').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  // ── fecha ao clicar no backdrop ────────────────────────────────────────────
+  document.getElementById('modalCriar').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalCriar();
+  });
+  document.getElementById('modalEditar').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalEditar();
+  });
+
+  // ── fecha com Escape ───────────────────────────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      fecharModalCriar();
+      fecharModalEditar();
+    }
+  });
+</script>
+</body>
+</html>

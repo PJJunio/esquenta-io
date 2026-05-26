@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Penalidade</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body th:style="${sala.modoJogo.name() == 'ESQUENTA'} ? 'background:#FF4757;color:#FFF4E0;' : 'background:#FFF4E0;color:#15110F;'">
+
+<!-- ESQUENTA: goles -->
+<div th:if="${sala.modoJogo.name() == 'ESQUENTA'}"
+     style="min-height:100vh;background:#FF4757;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
+  <div class="esq-halftone" style="background-image:radial-gradient(#FFF4E0 1.2px,transparent 1.2px);opacity:.1;"></div>
+
+  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;padding:40px 24px;max-width:400px;">
+    <div class="esq-label" style="color:#FFF4E0;opacity:0.85;">PENALIDADE 🍻</div>
+
+    <div style="position:relative;display:flex;flex-direction:column;align-items:center;">
+      <div style="animation:esq-shake 0.6s ease-in-out;">
+        <div data-mascot data-size="130" data-mood="tipsy"></div>
+      </div>
+    </div>
+
+    <div style="font-family:'Bagel Fat One',sans-serif;font-size:64px;line-height:1;color:#FFF4E0;">
+      🍻 <span th:text="${cartao.goles}">3</span>
+    </div>
+    <div class="esq-display" style="font-size:clamp(26px,6vw,34px);color:#FFF4E0;">
+      <span th:text="${cartao.goles}">3</span>
+      <span th:text="${cartao.goles == 1} ? ' gole' : ' goles'"> goles</span>
+      <span th:if="${jogadorDaVez != null}">pra <span style="color:#FFB800;" th:text="${jogadorDaVez.nickname}">Nick</span>!</span>
+    </div>
+    <p style="font-size:14px;max-width:280px;opacity:0.9;line-height:1.5;">
+      Não cumpriu o <span th:text="${cartao.tipo.name() == 'MICO'} ? 'mico' : 'desafio'">mico</span>, então paga aí. Beba com responsa, mano.
+    </p>
+
+    <div th:if="${cartao.pontosRecompensa > 0}" style="background:rgba(0,0,0,0.2);border-radius:14px;padding:10px 18px;display:flex;align-items:center;gap:8px;">
+      <span style="font-family:'Bagel Fat One',sans-serif;font-size:22px;color:#FFB800;">-<span th:text="${cartao.pontosRecompensa}">5</span> pts</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;opacity:0.8;">DESCONTADO</span>
+    </div>
+
+    <!-- Countdown auto-avança -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:10px;">
+      <div style="width:200px;height:5px;background:rgba(255,255,255,0.15);border-radius:100px;overflow:hidden;">
+        <div id="auto-bar-pen" style="height:100%;width:0%;background:#FFB800;transition:width 0.9s linear;border-radius:100px;"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;opacity:0.45;letter-spacing:0.08em;">
+        próxima rodada em <span id="auto-sec-pen">6</span>s
+      </div>
+    </div>
+
+    <a th:href="@{/sala/{id}/proximo-turno(id=${sala.id})}" id="btn-proximo-pen" class="esq-btn esq-btn--block" style="background:#FFB800;max-width:320px;margin-top:8px;font-size:16px;">
+      PRÓXIMA RODADA →
+    </a>
+  </div>
+</div>
+
+<!-- DE BOA: perde pontos -->
+<div th:if="${sala.modoJogo.name() == 'DE_BOA'}"
+     style="min-height:100vh;background:#FFF4E0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;">
+  <div class="esq-halftone"></div>
+
+  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;padding:40px 24px;max-width:400px;">
+    <div class="esq-label" style="color:#2A2421;">OPS, ERROU</div>
+
+    <div id="starburst-pts-lost"></div>
+
+    <div class="esq-display" style="font-size:clamp(26px,6vw,34px);color:#15110F;">
+      <span th:if="${jogadorDaVez != null}"><span style="color:#FF4757;" th:text="${jogadorDaVez.nickname}">Nick</span> perdeu</span>
+      <span th:unless="${jogadorDaVez != null}">perdeste</span>
+      pontos
+    </div>
+    <p style="font-size:14px;max-width:280px;color:#2A2421;line-height:1.5;">
+      No modo De Boa, errar custa só ponto. Bora pra próxima!
+    </p>
+
+    <!-- Aguardando outros (DE_BOA) -->
+    <div id="aguardando-bloco"
+         style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:4px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.08em;opacity:0.6;">
+        ⏳ aguardando outros jogadores...
+      </div>
+    </div>
+
+    <!-- Overlay placar (aparece após round-over) -->
+    <div id="placar-overlay"
+         style="display:none;flex-direction:column;align-items:center;gap:10px;
+                background:#15110F;border:3px solid #2DD4BF;border-radius:18px;
+                padding:18px 24px;min-width:240px;box-shadow:4px 4px 0 #0F7A6A;">
+      <div style="font-family:'Bagel Fat One',sans-serif;font-size:18px;color:#2DD4BF;">📊 Placar da rodada</div>
+      <div id="placar-lista" style="display:flex;flex-direction:column;gap:6px;width:100%;"></div>
+      <div id="placar-countdown" style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;opacity:0.5;margin-top:4px;">próxima em 3s...</div>
+    </div>
+
+    <a th:href="@{/sala/{id}/proximo-turno(id=${sala.id})}" id="btn-proximo-deb"
+       class="esq-btn esq-btn--block"
+       style="display:none;background:#FFB800;max-width:320px;margin-top:8px;font-size:16px;">
+      PRÓXIMA RODADA →
+    </a>
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@6/bundles/stomp.umd.min.js"></script>
+<script th:inline="javascript">
+  const salaId       = /*[[${sala.id}]]*/ 1;
+  const ehDeBoa      = /*[[${sala.modoJogo.name() == 'DE_BOA'}]]*/ false;
+  const pts          = /*[[${cartao != null ? cartao.pontosRecompensa : 10}]]*/ 10;
+  const placarInicial = /*[(${placarJson != null ? placarJson : 'null'})]*/ null;
+
+  // Starburst pontos perdidos (DE BOA)
+  const elLost = document.getElementById('starburst-pts-lost');
+  if (elLost) elLost.innerHTML = esqStarburst(170, '#F5E6C8',
+    `<span style="font-family:'Bagel Fat One',sans-serif;font-size:40px;color:#FF4757;line-height:1;">-${pts}</span>`);
+
+  let navegando = false;
+  function irProximo() {
+    if (navegando) return;
+    navegando = true;
+    window.location.href = '/sala/' + salaId + '/proximo-turno';
+  }
+
+  // ESQUENTA: auto-avança em 6s
+  let autoInt = null;
+  if (!ehDeBoa) {
+    let autoT = 6;
+    setTimeout(() => {
+      ['auto-bar-pen'].forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.style.width = '100%';
+      });
+    }, 50);
+    autoInt = setInterval(() => {
+      autoT--;
+      ['auto-sec-pen'].forEach(id => {
+        const s = document.getElementById(id);
+        if (s) s.textContent = autoT;
+      });
+      if (autoT <= 0) { clearInterval(autoInt); irProximo(); }
+    }, 1000);
+  }
+
+  // Mostra overlay de placar (DE_BOA) quando round-over chega
+  function mostrarPlacarOverlay(placar) {
+    const overlay = document.getElementById('placar-overlay');
+    const lista   = document.getElementById('placar-lista');
+    const aguard  = document.getElementById('aguardando-bloco');
+    const btn     = document.getElementById('btn-proximo-deb');
+    if (!overlay) return;
+
+    if (aguard) aguard.style.display = 'none';
+
+    if (lista && placar && placar.length) {
+      lista.innerHTML = placar
+        .sort((a, b) => b.p - a.p)
+        .map(j => `<div style="display:flex;justify-content:space-between;gap:16px;
+                               font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">
+          <span style="color:#FFF4E0;">${j.n}</span>
+          <span style="color:#2DD4BF;">${j.p} pts</span>
+        </div>`).join('');
+    }
+
+    overlay.style.display = 'flex';
+    if (btn) { btn.style.display = ''; }
+
+    // Countdown 3s para avançar automaticamente
+    let t = 3;
+    const cdEl = document.getElementById('placar-countdown');
+    const cdInt = setInterval(() => {
+      t--;
+      if (cdEl) cdEl.textContent = 'próxima em ' + t + 's...';
+      if (t <= 0) { clearInterval(cdInt); irProximo(); }
+    }, 1000);
+  }
+
+  let placarMostrado = false;
+
+  // Placar imediato: o próprio player foi o último a responder e já tem dados
+  if (placarInicial && ehDeBoa) {
+    try {
+      mostrarPlacarOverlay(JSON.parse(placarInicial));
+      placarMostrado = true;
+    } catch(e) {}
+  }
+
+  function aplicarStatus(d) {
+    if (d.type === 'game-over') {
+      if (autoInt) clearInterval(autoInt);
+      window.location.href = '/sala/' + salaId + '/podio';
+    } else if (d.type === 'round-over') {
+      if (ehDeBoa && !placarMostrado) {
+        placarMostrado = true;
+        let placar = d.placar;
+        if (typeof placar === 'string') { try { placar = JSON.parse(placar); } catch(e) {} }
+        mostrarPlacarOverlay(placar);
+      } else if (!ehDeBoa) {
+        if (autoInt) clearInterval(autoInt);
+        irProximo();
+      }
+    } else if (d.type === 'next-turn') {
+      if (autoInt) clearInterval(autoInt);
+      irProximo();
+    }
+  }
+
+  // WS
+  const ws = new StompJs.Client({ webSocketFactory: () => new SockJS('/ws'), reconnectDelay: 3000 });
+  ws.onConnect = () => {
+    ws.subscribe('/topic/partida/' + salaId, (msg) => {
+      try { aplicarStatus(JSON.parse(msg.body)); } catch(e) {}
+    });
+
+    // Catch-up: busca estado atual caso evento tenha chegado antes do WS conectar
+    if (ehDeBoa) {
+      fetch('/sala/' + salaId + '/quiz-status')
+        .then(r => r.json())
+        .then(d => aplicarStatus(d))
+        .catch(() => {});
+    }
+  };
+  ws.activate();
+</script>
+</body>
+</html>

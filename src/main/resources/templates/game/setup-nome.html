@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light only">
+  <title>esquenta.io — Seu nick</title>
+  <link rel="stylesheet" th:href="@{/css/esquenta.css}">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body style="background:#FFF4E0;color:#15110F;">
+
+<div style="min-height:100vh;background:#FFF4E0;position:relative;display:flex;flex-direction:column;">
+  <div class="esq-halftone"></div>
+
+  <!-- Header -->
+  <div style="position:relative;z-index:2;padding:clamp(20px,4vh,36px) clamp(20px,5vw,60px);display:flex;align-items:center;gap:12px;">
+    <a th:href="${modo == 'ESQUENTA'} ? '/game/criar-sala/esquenta-confirm' : '/game/criar-sala'"
+       class="esq-btn esq-btn--small esq-btn--paper">← VOLTAR</a>
+    <div style="flex:1;"></div>
+    <div class="esq-label" style="color:#2A2421;">passo 2 / 2</div>
+  </div>
+
+  <!-- Content -->
+  <div style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 clamp(20px,5vw,60px) clamp(30px,6vh,60px);">
+
+    <!-- Title -->
+    <div style="text-align:center;margin-bottom:clamp(24px,4vh,40px);">
+      <div class="esq-display" style="font-size:clamp(36px,7vw,56px);line-height:1.05;">
+        qual o seu <span th:style="${modo == 'ESQUENTA'} ? 'color:#FF4757;' : 'color:#2DD4BF;'">nick</span>?
+      </div>
+      <p style="margin-top:10px;font-size:15px;color:#2A2421;opacity:0.75;">
+        Como os outros jogadores vão te ver.
+      </p>
+    </div>
+
+    <!-- Form -->
+    <form th:action="${modo == 'ESQUENTA'} ? '/game/criar-sala/esquenta' : '/game/criar-sala/de-boa'"
+          method="post"
+          style="display:flex;flex-direction:column;gap:20px;max-width:460px;margin:0 auto;width:100%;">
+      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+      <!-- Nick input -->
+      <div>
+        <input class="esq-input" name="nickname" placeholder="como te chamam?" maxlength="16"
+               autocomplete="off" required minlength="2"
+               th:value="${nickname}"
+               oninput="document.getElementById('nick-count').textContent=this.value.length"
+               style="font-size:18px;padding:16px 18px;"/>
+        <div style="margin-top:8px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#2A2421;letter-spacing:0.06em;">
+          <span>mínimo 2 caracteres</span>
+          <span><span id="nick-count">0</span>/16</span>
+        </div>
+        <div th:if="${errorNick}" style="margin-top:8px;color:#FF4757;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;">
+          ⚠ <span th:text="${errorNick}"></span>
+        </div>
+      </div>
+
+      <!-- Mode badge -->
+      <div style="display:flex;justify-content:center;">
+        <span th:if="${modo == 'ESQUENTA'}" class="esq-tag" style="background:#FF4757;color:#FFF4E0;font-size:12px;">🔥 MODO ESQUENTA</span>
+        <span th:unless="${modo == 'ESQUENTA'}" class="esq-tag esq-tag--ink" style="font-size:12px;">😎 MODO DE BOA</span>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit"
+              th:class="${modo == 'ESQUENTA'} ? 'esq-btn esq-btn--red esq-btn--block' : 'esq-btn esq-btn--block'"
+              th:style="${modo != 'ESQUENTA'} ? 'background:#2DD4BF;' : ''"
+              style="font-size:18px;padding:18px;">
+        CRIAR SALA →
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<script th:src="@{/css/esquenta-components.js}"></script>
+<script>
+  // atualiza contador inicial se houver valor pre-preenchido
+  const input = document.querySelector('input[name=nickname]');
+  document.getElementById('nick-count').textContent = input.value.length;
+</script>
+</body>
+</html>
